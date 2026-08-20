@@ -684,6 +684,7 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     pack: 1,
     price: 1.10,
     cat: 'Fruits & Légumes',
+    season: [10, 11, 12, 1, 2, 3, 4],
     referenceGrams: 150,
     nutritionPer100: { calories: 160, proteins: 2.0, carbs: 8.5, fats: 14.7, fiber: 6.7 }
   },
@@ -694,6 +695,7 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     pack: 1,
     price: 0.40,
     cat: 'Fruits & Légumes',
+    season: [1, 2, 3, 4, 11, 12],
     referenceGrams: 100,
     nutritionPer100: { calories: 29, proteins: 1.1, carbs: 9.3, fats: 0.3, fiber: 2.8 }
   },
@@ -714,6 +716,7 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     pack: 1000,
     price: 2.30,
     cat: 'Fruits & Légumes',
+    season: [9, 10, 11, 12, 1, 2, 3],
     nutritionPer100: { calories: 86, proteins: 1.6, carbs: 20.1, fats: 0.1, fiber: 3.0 }
   },
   sardines: {

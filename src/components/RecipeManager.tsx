@@ -4,6 +4,13 @@ import { DayMealPlan, MealType, NutriScoreGrade, Recipe, StudentProfile } from '
 import { calculateDishEstimatedCost } from '../utils/budget';
 import { calculateDishNutrition, getAllRecipes } from '../utils/nutrition';
 import {
+  analyzeRecipeSeasonality,
+  getCurrentMonth,
+  getSeasonForMonth,
+  MONTH_NAMES_FR,
+  SEASONS
+} from '../utils/seasons';
+import {
   BookOpen,
   CalendarPlus,
   Check,
@@ -14,8 +21,10 @@ import {
   Edit2,
   Filter,
   Flame,
+  Heart,
   Info,
   Layers,
+  Leaf,
   Plus,
   RotateCcw,
   Search,
@@ -34,6 +43,10 @@ interface RecipeManagerProps {
   storeProfileId: string;
   extraShoppingRecipeIds: string[];
   weekPlan: DayMealPlan[];
+  favoriteRecipeIds: string[];
+  selectedSeasonMonth: number;
+  onSelectSeasonMonth: (month: number) => void;
+  onToggleFavorite: (recipeId: string) => void;
   onOpenCreateRecipe: () => void;
   onOpenEditRecipe: (recipe: Recipe) => void;
   onDeleteCustomRecipe: (type: MealType, recipeId: string) => void;
@@ -53,6 +66,10 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
   storeProfileId,
   extraShoppingRecipeIds,
   weekPlan,
+  favoriteRecipeIds,
+  selectedSeasonMonth,
+  onSelectSeasonMonth,
+  onToggleFavorite,
   onOpenCreateRecipe,
   onOpenEditRecipe,
   onDeleteCustomRecipe,
@@ -68,7 +85,8 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<MealType | 'all'>('all');
-  const [selectedOrigin, setSelectedOrigin] = useState<'all' | 'custom' | 'base'>('all');
+  const [selectedOrigin, setSelectedOrigin] = useState<'all' | 'custom' | 'base' | 'favorites'>('all');
+  const [filterSeasonalOnly, setFilterSeasonalOnly] = useState<boolean>(false);
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedNutriScore, setSelectedNutriScore] = useState<NutriScoreGrade | 'all'>('all');
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'price-asc' | 'time' | 'calories-asc' | 'proteins-desc'>('default');
@@ -98,6 +116,11 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
     return Array.from(tagsSet);
   }, [allRecipes]);
 
+  // Counts
+  const customCount = (customRecipes.midi?.length || 0) + (customRecipes.soir?.length || 0);
+  const favoritesCount = allRecipes.filter(r => favoriteRecipeIds.includes(r.id)).length;
+  const seasonalCount = allRecipes.filter(r => analyzeRecipeSeasonality(r, selectedSeasonMonth).isAllInSeason).length;
+
   // Filter and sort recipes
   const filteredRecipes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -108,15 +131,22 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
         return false;
       }
 
-      // 2. Origin filter (custom vs base)
-      if (selectedOrigin === 'custom' && !recipe.isCustom) {
+      // 2. Origin / Favorites filter
+      if (selectedOrigin === 'favorites') {
+        if (!favoriteRecipeIds.includes(recipe.id)) return false;
+      } else if (selectedOrigin === 'custom' && !recipe.isCustom) {
         return false;
-      }
-      if (selectedOrigin === 'base' && recipe.isCustom) {
+      } else if (selectedOrigin === 'base' && recipe.isCustom) {
         return false;
       }
 
-      // 3. NutriScore filter
+      // 3. Seasonal Filter
+      if (filterSeasonalOnly) {
+        const season = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
+        if (!season.isAllInSeason) return false;
+      }
+
+      // 4. NutriScore filter
       if (selectedNutriScore !== 'all') {
         const nut = calculateDishNutrition(recipe);
         if (nut.nutriScore !== selectedNutriScore) {
@@ -124,26 +154,22 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
         }
       }
 
-      // 4. Tag filter
+      // 5. Tag filter
       if (selectedTag !== 'all') {
         if (!recipe.tags || !recipe.tags.includes(selectedTag)) {
           return false;
         }
       }
 
-      // 5. Search Query (matches name, ingredients, tags, instructions)
+      // 6. Search Query (matches name, ingredients, tags, instructions)
       if (query) {
         const nameMatch = recipe.name.toLowerCase().includes(query);
         const tagMatch = recipe.tags?.some(t => t.toLowerCase().includes(query));
         const stepMatch = recipe.steps.some(s => s.toLowerCase().includes(query));
         const ingredientMatch = recipe.ingredients.some(ing => {
           const ingInfo = INGREDIENTS[ing.id];
-          return (
-            ing.id.toLowerCase().includes(query) ||
-            (ingInfo && ingInfo.name.toLowerCase().includes(query))
-          );
+          return ing.id.toLowerCase().includes(query) || (ingInfo && ingInfo.name.toLowerCase().includes(query));
         });
-
         if (!nameMatch && !tagMatch && !stepMatch && !ingredientMatch) {
           return false;
         }
@@ -155,89 +181,35 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
     // Sorting
     return filtered.sort((a, b) => {
       if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name, 'fr');
       }
       if (sortBy === 'price-asc') {
-        return calculateDishEstimatedCost(a, storeProfileId) - calculateDishEstimatedCost(b, storeProfileId);
+        const costA = calculateDishEstimatedCost(a, storeProfileId);
+        const costB = calculateDishEstimatedCost(b, storeProfileId);
+        return costA - costB;
       }
       if (sortBy === 'time') {
-        const timeA = parseInt((a.time.match(/\d+/) || ['99'])[0], 10);
-        const timeB = parseInt((b.time.match(/\d+/) || ['99'])[0], 10);
-        return timeA - timeB;
+        const matchA = a.time.match(/(\d+)/);
+        const matchB = b.time.match(/(\d+)/);
+        const tA = matchA ? parseInt(matchA[1], 10) : 0;
+        const tB = matchB ? parseInt(matchB[1], 10) : 0;
+        return tA - tB;
       }
       if (sortBy === 'calories-asc') {
-        return calculateDishNutrition(a).calories - calculateDishNutrition(b).calories;
+        const nutA = calculateDishNutrition(a);
+        const nutB = calculateDishNutrition(b);
+        return nutA.calories - nutB.calories;
       }
       if (sortBy === 'proteins-desc') {
-        return calculateDishNutrition(b).proteins - calculateDishNutrition(a).proteins;
+        const nutA = calculateDishNutrition(a);
+        const nutB = calculateDishNutrition(b);
+        return nutB.proteins - nutA.proteins;
       }
       return 0;
     });
-  }, [allRecipes, searchQuery, selectedMealType, selectedOrigin, selectedNutriScore, selectedTag, sortBy, storeProfileId]);
+  }, [allRecipes, searchQuery, selectedMealType, selectedOrigin, filterSeasonalOnly, selectedNutriScore, selectedTag, sortBy, storeProfileId, favoriteRecipeIds, selectedSeasonMonth]);
 
-  // Statistics
-  const customCount = useMemo(() => {
-    return (customRecipes.midi?.length || 0) + (customRecipes.soir?.length || 0);
-  }, [customRecipes]);
-
-  // Toast trigger
-  const showToast = (title: string, subtitle?: string) => {
-    setToastMessage({ title, subtitle });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
-  };
-
-  // Toggle selection for single recipe
-  const toggleSelectRecipe = (id: string) => {
-    setSelectedRecipeIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
-  // Select all currently filtered recipes
-  const handleSelectAllFiltered = () => {
-    const filteredIds = filteredRecipes.map(r => r.id);
-    const allSelected = filteredIds.every(id => selectedRecipeIds.includes(id));
-    if (allSelected) {
-      setSelectedRecipeIds(prev => prev.filter(id => !filteredIds.includes(id)));
-    } else {
-      setSelectedRecipeIds(prev => Array.from(new Set([...prev, ...filteredIds])));
-    }
-  };
-
-  // Handle batch adding to shopping list
-  const handleBatchAddToShopping = () => {
-    if (selectedRecipeIds.length === 0) return;
-    onAddMultipleRecipesToShopping(selectedRecipeIds);
-    showToast(
-      `🛒 ${selectedRecipeIds.length} recette${selectedRecipeIds.length > 1 ? 's ajoutées' : ' ajoutée'} aux courses !`,
-      'Tous les ingrédients nécessaires sont maintenant inclus dans votre ticket.'
-    );
-    setSelectedRecipeIds([]);
-  };
-
-  // Single add to shopping list
-  const handleSingleAddToShopping = (recipe: Recipe) => {
-    onAddRecipeToShopping(recipe.id);
-    showToast(
-      `🛒 "${recipe.name}" ajoutée aux courses !`,
-      `${recipe.ingredients.length} ingrédient${recipe.ingredients.length > 1 ? 's ajoutés' : ' ajouté'} automatiquement.`
-    );
-  };
-
-  // Plan assign submit
-  const handleConfirmPlanAssignment = () => {
-    if (!planningRecipe) return;
-    onAssignToPlan(planDayIdx, planSlotType, planningRecipe.id);
-    const dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    const slotNames: Record<MealType, string> = { midi: 'Midi', soir: 'Soir' };
-    showToast(
-      `📅 Plat programmé !`,
-      `"${planningRecipe.name}" est placé pour le ${dayNames[planDayIdx]} (${slotNames[planSlotType]}).`
-    );
-    setPlanningRecipe(null);
-  };
+  const activeSeason = getSeasonForMonth(selectedSeasonMonth);
 
   const getNutriScoreBadge = (score: NutriScoreGrade) => {
     switch (score) {
@@ -250,113 +222,199 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
     }
   };
 
-  const dayLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  const showToast = (title: string, subtitle?: string) => {
+    setToastMessage({ title, subtitle });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  const toggleSelectRecipe = (id: string) => {
+    setSelectedRecipeIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allFilteredIds = filteredRecipes.map(r => r.id);
+    const areAllSelected = allFilteredIds.every(id => selectedRecipeIds.includes(id));
+    if (areAllSelected) {
+      setSelectedRecipeIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedRecipeIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
+  const handleBatchAddToShopping = () => {
+    if (selectedRecipeIds.length === 0) return;
+    onAddMultipleRecipesToShopping(selectedRecipeIds);
+    showToast(
+      `${selectedRecipeIds.length} recette${selectedRecipeIds.length > 1 ? 's ajoutées' : ' ajoutée'} aux courses !`,
+      'Les ingrédients ont été fusionnés dans votre ticket.'
+    );
+    setSelectedRecipeIds([]);
+  };
+
+  const handleSingleAddToShopping = (recipe: Recipe) => {
+    onAddRecipeToShopping(recipe.id);
+    showToast(
+      `"${recipe.name}" ajoutée aux courses !`,
+      `${recipe.ingredients.length} ingrédients ajoutés au ticket.`
+    );
+  };
+
+  const handleConfirmPlanAssignment = () => {
+    if (!planningRecipe) return;
+    onAssignToPlan(planDayIdx, planSlotType, planningRecipe.id);
+    const dayName = weekPlan[planDayIdx]?.day || `Jour ${planDayIdx + 1}`;
+    showToast(
+      `Planifié pour ${dayName} (${planSlotType === 'midi' ? 'Midi' : 'Soir'}) !`,
+      `"${planningRecipe.name}" est maintenant au menu.`
+    );
+    setPlanningRecipe(null);
+  };
+
+  const dayLabels = weekPlan.map((d, i) => d.day || `Jour ${i + 1}`);
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
+      {/* Toast notification banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#433E37] text-white p-4 rounded-2xl shadow-xl border border-[#FAF8F5]/20 flex items-start gap-3 animate-in slide-in-from-bottom-4 duration-200 max-w-md">
-          <div className="w-8 h-8 rounded-xl bg-[#8BA888] text-white flex items-center justify-center shrink-0">
-            <Check className="w-4 h-4 font-bold" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#433E37] text-white p-4 rounded-2xl shadow-xl border border-[#8BA888] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <div className="w-8 h-8 rounded-xl bg-[#8BA888] text-white flex items-center justify-center font-bold">
+            ✓
           </div>
-          <div className="flex-1 text-xs">
-            <h4 className="font-bold text-sm text-white">{toastMessage.title}</h4>
+          <div>
+            <div className="font-bold text-sm">{toastMessage.title}</div>
             {toastMessage.subtitle && (
-              <p className="text-[#E6E1D7] mt-0.5">{toastMessage.subtitle}</p>
+              <div className="text-xs text-[#DCD6CB]">{toastMessage.subtitle}</div>
             )}
-            <button
-              onClick={onNavigateToShopping}
-              className="mt-2 text-xs font-bold text-[#D97706] hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              Voir la liste de courses →
-            </button>
           </div>
           <button
-            onClick={() => setToastMessage(null)}
-            className="text-[#A39E93] hover:text-white p-1"
+            onClick={() => onNavigateToShopping()}
+            className="ml-2 text-xs font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            Voir le ticket
           </button>
         </div>
       )}
 
-      {/* Top Banner: Stats & Creation CTA */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#E6E1D7] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="space-y-1">
+      {/* Top Banner: Stats, Actions & Season Bar */}
+      <div className="bg-white p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]">
-              Catalogue & Recettes
-            </span>
-            <span className="text-xs text-[#7D7569]">
-              {allRecipes.length} recettes au total ({customCount} créations perso)
+            <h2 className="text-xl font-bold text-[#433E37]">
+              Livre de Recettes Étudiantes
+            </h2>
+            <span className="text-xs font-mono-code font-bold bg-[#EBF2EA] text-[#3D593A] px-2.5 py-0.5 rounded-full border border-[#D1E0CE]">
+              {allRecipes.length} recettes
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#433E37] tracking-tight flex items-center gap-2">
-            <ChefHat className="w-6 h-6 text-[#8BA888]" />
-            Livre de Recettes & Gestionnaire
-          </h2>
-          <p className="text-xs sm:text-sm text-[#7D7569] max-w-2xl leading-relaxed">
-            Crée tes propres recettes étudiantes avec ingrédients et valeurs nutritionnelles, recherche par mots-clés ou ingrédients, et ajoute instantanément tous les ingrédients nécessaires à ta liste de courses.
+          <p className="text-xs text-[#7D7569] mt-0.5">
+            Explorez, filtrez par saison et vos favoris, ou composez vos propres fiches cuisine.
           </p>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        {/* Action Button: Create Recipe */}
+        <button
+          onClick={onOpenCreateRecipe}
+          className="px-4 py-2.5 bg-[#8BA888] hover:bg-[#789675] text-white text-xs sm:text-sm font-bold rounded-xl flex items-center gap-2 shadow-xs transition-transform active:scale-95 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Créer une recette</span>
+        </button>
+      </div>
+
+      {/* Seasonality Header Bar */}
+      <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-2xl border border-[#DCD6CB] flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-[#EBF2EA] text-[#3D593A] flex items-center justify-center text-lg border border-[#D1E0CE]">
+            {activeSeason.emoji}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#433E37]">
+                Saison : {activeSeason.label} ({MONTH_NAMES_FR[selectedSeasonMonth - 1]})
+              </span>
+              <span className="text-[10px] bg-white px-2 py-0.5 rounded border border-[#E6E1D7] text-[#7D7569] font-mono-code">
+                {seasonalCount} recettes 100% de saison
+              </span>
+            </div>
+            <p className="text-[11px] text-[#7D7569]">
+              Fruits et légumes au meilleur prix et goût optimal.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Seasonal Filter Quick Toggle */}
           <button
-            onClick={onOpenCreateRecipe}
-            className="px-4 py-2.5 bg-[#433E37] hover:bg-[#332F2A] text-white font-bold text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xs transition-transform active:scale-95 cursor-pointer"
+            onClick={() => setFilterSeasonalOnly(!filterSeasonalOnly)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+              filterSeasonalOnly
+                ? 'bg-[#3D593A] text-white shadow-2xs'
+                : 'bg-white text-[#7D7569] hover:text-[#3D593A] hover:bg-[#EBF2EA] border border-[#DCD6CB]'
+            }`}
           >
-            <Plus className="w-4 h-4 text-[#8BA888]" />
-            <span>Créer une recette</span>
+            <Leaf className="w-3.5 h-3.5" />
+            <span>Plats de saison uniquement</span>
           </button>
 
-          {extraShoppingRecipeIds.length > 0 && (
-            <button
-              onClick={onNavigateToShopping}
-              className="px-3.5 py-2.5 bg-[#EBF2EA] hover:bg-[#DDE9DB] text-[#3D593A] font-bold text-xs rounded-xl flex items-center gap-2 border border-[#D1E0CE] transition-colors cursor-pointer"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span>{extraShoppingRecipeIds.length} au ticket de courses</span>
-            </button>
-          )}
+          {/* Month Dropdown */}
+          <select
+            value={selectedSeasonMonth}
+            onChange={(e) => onSelectSeasonMonth(parseInt(e.target.value, 10))}
+            className="text-xs font-bold bg-white border border-[#DCD6CB] rounded-xl py-1.5 px-2.5 text-[#433E37] focus:outline-none focus:border-[#8BA888] cursor-pointer"
+            title="Changer le mois pour voir la saisonnalité"
+          >
+            {MONTH_NAMES_FR.map((name, idx) => {
+              const m = idx + 1;
+              const s = getSeasonForMonth(m);
+              return (
+                <option key={m} value={m}>
+                  {s.emoji} {name}
+                </option>
+              );
+            })}
+          </select>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E6E1D7] shadow-xs space-y-4">
-        {/* Search input + Sorting row */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#A39E93] absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* Search and Filters Card */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs space-y-4">
+        {/* Search input & Sort */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search box */}
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A39E93]" />
             <input
               type="text"
+              placeholder="Rechercher par nom, ingrédient (ex: riz, thon, carotte), étape..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par titre, ingrédient (ex: poulet, pâtes, thon, pois chiches), tag ou étape..."
-              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#DCD6CB] rounded-xl text-[#433E37] placeholder-[#A39E93] focus:outline-none focus:border-[#8BA888] focus:bg-white transition-colors"
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#DCD6CB] rounded-xl text-[#433E37] placeholder-[#A39E93] focus:outline-none focus:border-[#8BA888] transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A39E93] hover:text-[#433E37] p-1 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A39E93] hover:text-[#433E37] p-0.5 rounded cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Sort selector */}
+          {/* Sort dropdown */}
           <div className="flex items-center gap-2 shrink-0">
-            <SlidersHorizontal className="w-4 h-4 text-[#7D7569] hidden sm:block" />
+            <SlidersHorizontal className="w-4 h-4 text-[#7D7569]" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="text-xs font-semibold bg-[#FAF8F5] border border-[#DCD6CB] rounded-xl py-2.5 px-3 text-[#433E37] focus:outline-none focus:border-[#8BA888] cursor-pointer"
+              className="text-xs font-semibold bg-[#FAF8F5] border border-[#DCD6CB] rounded-xl py-2 px-3 text-[#433E37] focus:outline-none focus:border-[#8BA888] cursor-pointer"
             >
               <option value="default">Tri par défaut</option>
               <option value="name">Nom (A → Z)</option>
-              <option value="price-asc">Prix estimé croissant (€)</option>
+              <option value="price-asc">Prix estimé (€ croissant)</option>
               <option value="time">Temps de préparation</option>
               <option value="calories-asc">Calories (Moins calorique)</option>
               <option value="proteins-desc">Protéines (Plus protéiné)</option>
@@ -388,11 +446,12 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
             ))}
           </div>
 
-          {/* Origin filter */}
+          {/* Origin / Favorites filter */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-bold text-[#7D7569] mr-1">Origine :</span>
+            <span className="text-xs font-bold text-[#7D7569] mr-1">Catégorie :</span>
             {[
-              { id: 'all', label: 'Toutes' },
+              { id: 'all', label: `Toutes (${allRecipes.length})` },
+              { id: 'favorites', label: `❤️ Favoris (${favoritesCount})` },
               { id: 'custom', label: `⭐ Mes créations (${customCount})` },
               { id: 'base', label: '📚 Base étudiante' }
             ].map(tab => (
@@ -401,7 +460,9 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                 onClick={() => setSelectedOrigin(tab.id as any)}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
                   selectedOrigin === tab.id
-                    ? 'bg-[#8BA888] text-white shadow-2xs'
+                    ? tab.id === 'favorites'
+                      ? 'bg-[#B84A39] text-white shadow-2xs'
+                      : 'bg-[#8BA888] text-white shadow-2xs'
                     : 'bg-[#FAF8F5] text-[#7D7569] hover:text-[#433E37] hover:bg-[#F4F1EB] border border-[#E6E1D7]'
                 }`}
               >
@@ -531,6 +592,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                 setSelectedOrigin('all');
                 setSelectedNutriScore('all');
                 setSelectedTag('all');
+                setFilterSeasonalOnly(false);
               }}
               className="px-4 py-2 bg-[#F4F1EB] hover:bg-[#EAE5DC] text-[#433E37] text-xs font-bold rounded-xl border border-[#E6E1D7] cursor-pointer"
             >
@@ -552,6 +614,8 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
             const cost = calculateDishEstimatedCost(recipe, storeProfileId);
             const isSelected = selectedRecipeIds.includes(recipe.id);
             const isAddedToShopping = extraShoppingRecipeIds.includes(recipe.id);
+            const isFav = favoriteRecipeIds.includes(recipe.id);
+            const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
 
             return (
               <div
@@ -562,7 +626,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
               >
                 {/* Card Header Top */}
                 <div className="p-4 bg-[#FAF8F5] border-b border-[#E6E1D7] flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -570,9 +634,45 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                       className="w-4 h-4 text-[#8BA888] rounded border-[#DCD6CB] focus:ring-[#8BA888] cursor-pointer"
                       title="Sélectionner pour action groupée"
                     />
+
+                    {/* Favorite Heart Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => onToggleFavorite(recipe.id)}
+                      className="p-1 text-[#A39E93] hover:text-[#B84A39] transition-colors rounded cursor-pointer"
+                      title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      <Heart
+                        className={`w-4 h-4 transition-transform active:scale-125 ${
+                          isFav ? 'text-[#B84A39] fill-[#B84A39]' : 'hover:fill-[#B84A39]/20'
+                        }`}
+                      />
+                    </button>
+
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white text-[#433E37] border border-[#E6E1D7]">
                       {recipe.type === 'midi' ? '☀️ Midi' : '🌙 Soir'}
                     </span>
+
+                    {/* Seasonal Badge */}
+                    {seasonAnalysis.hasSeasonalProduce && (
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                          seasonAnalysis.isAllInSeason
+                            ? 'bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]'
+                            : 'bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]'
+                        }`}
+                        title={
+                          seasonAnalysis.isAllInSeason
+                            ? 'Tous les légumes/fruits sont de saison'
+                            : seasonAnalysis.outOfSeasonProduce
+                                .map(p => `${p.name} (saison : ${p.bestMonths})`)
+                                .join(', ')
+                        }
+                      >
+                        {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                      </span>
+                    )}
+
                     {recipe.isCustom && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#FDF6EE] text-[#D97706] border border-[#FAD7A0] flex items-center gap-0.5">
                         ⭐ Perso
@@ -782,7 +882,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
               </div>
               <button
                 onClick={() => setPlanningRecipe(null)}
-                className="p-1 text-[#A39E93] hover:text-[#433E37] rounded-lg"
+                className="p-1 text-[#A39E93] hover:text-[#433E37] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -802,7 +902,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                 <select
                   value={planDayIdx}
                   onChange={(e) => setPlanDayIdx(parseInt(e.target.value, 10))}
-                  className="w-full bg-white border border-[#DCD6CB] rounded-xl p-2.5 text-[#433E37] font-semibold focus:outline-none focus:border-[#8BA888]"
+                  className="w-full bg-white border border-[#DCD6CB] rounded-xl p-2.5 text-[#433E37] font-semibold focus:outline-none focus:border-[#8BA888] cursor-pointer"
                 >
                   {dayLabels.map((day, idx) => (
                     <option key={idx} value={idx}>
@@ -841,7 +941,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
             <div className="p-4 bg-white border-t border-[#E6E1D7] flex items-center justify-end gap-2">
               <button
                 onClick={() => setPlanningRecipe(null)}
-                className="px-4 py-2 text-xs font-semibold text-[#7D7569] hover:text-[#433E37] bg-[#F4F1EB] rounded-xl"
+                className="px-4 py-2 text-xs font-semibold text-[#7D7569] hover:text-[#433E37] bg-[#F4F1EB] rounded-xl cursor-pointer"
               >
                 Annuler
               </button>

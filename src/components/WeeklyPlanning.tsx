@@ -3,8 +3,34 @@ import { DayMealPlan, MealType, Recipe, StudentProfile } from '../types';
 import { calculateDishEstimatedCost } from '../utils/budget';
 import { calculateDishNutrition, findRecipeById } from '../utils/nutrition';
 import { getValidRecipes, pickRandomRecipe } from '../utils/planner';
-import { ArrowLeftRight, Check, CheckCircle2, ChevronRight, Clock, Dices, Flame, Info, Plus, RotateCcw, Sparkles, Trash2, UtensilsCrossed } from 'lucide-react';
+import {
+  analyzeRecipeSeasonality,
+  getCurrentMonth,
+  getSeasonForMonth,
+  MONTH_NAMES_FR,
+  SEASONS
+} from '../utils/seasons';
+import {
+  ArrowLeftRight,
+  Calendar,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Dices,
+  Flame,
+  Heart,
+  Info,
+  Leaf,
+  Plus,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Trash2,
+  UtensilsCrossed
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { MealPickerModal } from './MealPickerModal';
 
 interface WeeklyPlanningProps {
   plan: DayMealPlan[];
@@ -12,6 +38,10 @@ interface WeeklyPlanningProps {
   profile: StudentProfile;
   storeProfileId: string;
   customRecipes?: Record<MealType, Recipe[]>;
+  favoriteRecipeIds: string[];
+  selectedSeasonMonth: number;
+  onSelectSeasonMonth: (month: number) => void;
+  onToggleFavorite: (recipeId: string) => void;
   onToggleMealDone: (dayIdx: number, type: MealType) => void;
   onSetMeal: (dayIdx: number, type: MealType, recipeId: string | null) => void;
   onSwapMeals: (d1: number, t1: MealType, d2: number, t2: MealType) => void;
@@ -25,6 +55,10 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   profile,
   storeProfileId,
   customRecipes,
+  favoriteRecipeIds,
+  selectedSeasonMonth,
+  onSelectSeasonMonth,
+  onToggleFavorite,
   onToggleMealDone,
   onSetMeal,
   onSwapMeals,
@@ -32,11 +66,13 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   onCookDish
 }) => {
   const [swapSource, setSwapSource] = useState<{ dayIdx: number; type: MealType } | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<{ dayIdx: number; dayName: string; type: MealType } | null>(null);
 
   // Time & progress stats
   let totalMinutes = 0;
   let totalMealsCount = 0;
   let doneMealsCount = 0;
+  let seasonalMealsCount = 0;
 
   plan.forEach((d, dIdx) => {
     (['midi', 'soir'] as MealType[]).forEach(type => {
@@ -49,6 +85,11 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
       if (recipe) {
         const match = recipe.time.match(/(\d+)\s*min/);
         if (match) totalMinutes += parseInt(match[1], 10);
+
+        const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
+        if (seasonAnalysis.isAllInSeason) {
+          seasonalMealsCount++;
+        }
       }
     });
   });
@@ -56,6 +97,7 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
   const progressPct = totalMealsCount > 0 ? Math.round((doneMealsCount / totalMealsCount) * 100) : 0;
+  const activeSeason = getSeasonForMonth(selectedSeasonMonth);
 
   const handleSwapClick = (dayIdx: number, type: MealType) => {
     if (!swapSource) {
@@ -91,11 +133,13 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
     const used = new Set(plan.map(d => d[type]).filter(Boolean) as string[]);
     const pool = getValidRecipes(type, profile, customRecipes);
     const pick = pickRandomRecipe(pool, used, type, customRecipes);
-    if (!pick) {
-      alert("Aucune recette disponible avec votre équipement actuel.");
-      return;
+    if (pick) {
+      onSetMeal(dayIdx, type, pick.id);
     }
-    onSetMeal(dayIdx, type, pick.id);
+  };
+
+  const handleOpenPicker = (dayIdx: number, dayName: string, type: MealType) => {
+    setPickerTarget({ dayIdx, dayName, type });
   };
 
   const handleToggleDoneWithConfetti = (dayIdx: number, type: MealType) => {
@@ -126,23 +170,26 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Time in kitchen & cooking progress banner */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FDF6EE] text-[#D97706] flex items-center justify-center border border-[#F4DECA]">
+      {/* Time in kitchen, Cooking Progress & Season Banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Cooking Time Box */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#FDF6EE] text-[#D97706] flex items-center justify-center border border-[#F4DECA] shrink-0">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs text-[#7D7569] font-medium">Temps de cuisine estimé cette semaine :</span>
+            <span className="text-xs text-[#7D7569] font-medium block">Temps de cuisine estimé :</span>
             <div className="text-base sm:text-lg font-bold text-[#433E37] font-mono-code">
               {totalMinutes > 0 ? `${hours > 0 ? `${hours}h ` : ''}${mins} min` : '—'}
             </div>
+            <span className="text-[10px] text-[#A39E93]">sur la semaine</span>
           </div>
         </div>
 
-        <div className="flex-1 max-w-xs space-y-1">
+        {/* Progress Box */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex flex-col justify-center space-y-1.5">
           <div className="flex justify-between text-xs font-mono-code text-[#7D7569]">
-            <span>Repas cuisinés</span>
+            <span className="font-bold text-[#433E37]">Avancement semaine</span>
             <span className="font-bold text-[#3D593A]">{doneMealsCount} / {totalMealsCount} ({progressPct}%)</span>
           </div>
           <div className="h-2.5 w-full bg-[#F4F1EB] rounded-full overflow-hidden border border-[#E6E1D7]">
@@ -150,6 +197,48 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
               className="h-full bg-[#8BA888] transition-all duration-500 rounded-full"
               style={{ width: `${progressPct}%` }}
             />
+          </div>
+          <span className="text-[10px] text-[#A39E93]">
+            {totalMealsCount - doneMealsCount} repas restant{totalMealsCount - doneMealsCount > 1 ? 's' : ''} à préparer
+          </span>
+        </div>
+
+        {/* Active Season Box */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#EBF2EA] text-[#3D593A] flex items-center justify-center border border-[#D1E0CE] text-xl shrink-0">
+              {activeSeason.emoji}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-[#7D7569] font-medium">Saison active :</span>
+                <span className="text-xs font-bold text-[#3D593A]">{activeSeason.label}</span>
+              </div>
+              <div className="text-xs font-semibold text-[#433E37] flex items-center gap-1 mt-0.5">
+                <Leaf className="w-3 h-3 text-[#8BA888]" />
+                <span>{seasonalMealsCount}/{totalMealsCount} plats 100% de saison</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Month Selector */}
+          <div className="shrink-0">
+            <select
+              value={selectedSeasonMonth}
+              onChange={(e) => onSelectSeasonMonth(parseInt(e.target.value, 10))}
+              className="text-xs font-bold bg-[#FAF8F5] border border-[#DCD6CB] rounded-xl py-2 px-2 text-[#433E37] focus:outline-none focus:border-[#8BA888] cursor-pointer"
+              title="Changer le mois de référence pour la saisonnalité des fruits et légumes"
+            >
+              {MONTH_NAMES_FR.map((name, idx) => {
+                const m = idx + 1;
+                const s = getSeasonForMonth(m);
+                return (
+                  <option key={m} value={m}>
+                    {s.emoji} {name}
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
       </div>
@@ -204,10 +293,11 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                 const recipe = findRecipeById(type, rid, customRecipes);
                 const isDone = !!completedMeals[`${dayIdx}-${type}`];
                 const isSwapTarget = swapSource?.dayIdx === dayIdx && swapSource?.type === type;
+                const isFav = recipe ? favoriteRecipeIds.includes(recipe.id) : false;
 
                 if (!recipe || !rid) {
                   return (
-                    <div key={type} className="p-3 px-5 flex items-center justify-between bg-[#F9F7F2]">
+                    <div key={type} className="p-3.5 px-4 sm:px-5 flex items-center justify-between bg-[#F9F7F2]">
                       <div className="flex items-center gap-3">
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
                           type === 'midi' ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]' : 'bg-[#F4F1EB] text-[#433E37] border-[#E6E1D7]'
@@ -216,19 +306,34 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                         </span>
                         <span className="text-xs text-[#A39E93] italic">Aucun repas planifié</span>
                       </div>
-                      <button
-                        onClick={() => handleAddSlot(dayIdx, type)}
-                        className="px-3 py-1 text-xs font-semibold text-[#3D593A] bg-[#EBF2EA] hover:bg-[#D1E0CE] rounded-lg flex items-center gap-1 border border-[#D1E0CE] cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Ajouter
-                      </button>
+
+                      <div className="flex items-center gap-2">
+                        {/* Search and Pick Specific Dish */}
+                        <button
+                          onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
+                          className="px-3 py-1.5 text-xs font-bold text-[#433E37] bg-white hover:bg-[#F4F1EB] rounded-lg flex items-center gap-1.5 border border-[#DCD6CB] cursor-pointer shadow-2xs transition-colors"
+                        >
+                          <Search className="w-3.5 h-3.5 text-[#8BA888]" />
+                          <span>Choisir un plat</span>
+                        </button>
+
+                        {/* Quick Random Add */}
+                        <button
+                          onClick={() => handleAddSlot(dayIdx, type)}
+                          className="px-2.5 py-1.5 text-xs font-semibold text-[#7D7569] hover:text-[#433E37] bg-[#EAE5DC] hover:bg-[#DCD6CB] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Ajouter un plat au hasard"
+                        >
+                          <Dices className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Aléatoire</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 }
 
                 const nutrition = calculateDishNutrition(recipe);
                 const cost = calculateDishEstimatedCost(recipe, storeProfileId);
+                const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
 
                 return (
                   <div
@@ -241,16 +346,30 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                         : 'hover:bg-[#F9F7F2]'
                     }`}
                   >
-                    {/* Left: Tag + Name + Prep time */}
-                    <div className="flex items-center gap-3 flex-1 min-w-[220px]">
+                    {/* Left: Tag + Heart + Name + Prep time */}
+                    <div className="flex items-center gap-3 flex-1 min-w-[240px]">
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 ${
                         type === 'midi' ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]' : 'bg-[#F4F1EB] text-[#433E37] border-[#E6E1D7]'
                       }`}>
                         {type === 'midi' ? 'Midi' : 'Soir'}
                       </span>
 
+                      {/* Favorite Heart Button */}
+                      <button
+                        type="button"
+                        onClick={() => onToggleFavorite(recipe.id)}
+                        className="p-1 text-[#A39E93] hover:text-[#B84A39] transition-colors rounded-md cursor-pointer shrink-0"
+                        title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                      >
+                        <Heart
+                          className={`w-4 h-4 transition-transform active:scale-125 ${
+                            isFav ? 'text-[#B84A39] fill-[#B84A39]' : 'hover:fill-[#B84A39]/20'
+                          }`}
+                        />
+                      </button>
+
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span
                             onClick={() => onInspectDish(recipe)}
                             className={`font-semibold text-xs sm:text-sm hover:text-[#8BA888] cursor-pointer transition-colors ${
@@ -259,6 +378,27 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                           >
                             {recipe.name}
                           </span>
+
+                          {/* Seasonal Badge */}
+                          {seasonAnalysis.hasSeasonalProduce && (
+                            <span
+                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 ${
+                                seasonAnalysis.isAllInSeason
+                                  ? 'bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]'
+                                  : 'bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]'
+                              }`}
+                              title={
+                                seasonAnalysis.isAllInSeason
+                                  ? 'Tous les fruits et légumes de ce plat sont de saison'
+                                  : seasonAnalysis.outOfSeasonProduce
+                                      .map(p => `${p.name} (saison : ${p.bestMonths})`)
+                                      .join(', ')
+                              }
+                            >
+                              {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                            </span>
+                          )}
+
                           {recipe.isFallback && (
                             <span className="text-[10px] text-[#D97706] font-bold bg-[#FDF6EE] px-1.5 py-0.2 rounded border border-[#F4DECA]">
                               Dépannage
@@ -316,6 +456,15 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
 
                       {!isDone && (
                         <>
+                          {/* Search / Pick Specific Recipe */}
+                          <button
+                            onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
+                            className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
+                            title="Rechercher et choisir un autre plat précis pour ce créneau"
+                          >
+                            <Search className="w-4 h-4 text-[#8BA888]" />
+                          </button>
+
                           {/* Cooking mode with timers */}
                           <button
                             onClick={() => onCookDish(recipe, dayIdx, type)}
@@ -374,6 +523,24 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Dish Picker Modal */}
+      {pickerTarget && (
+        <MealPickerModal
+          isOpen={Boolean(pickerTarget)}
+          targetSlot={pickerTarget}
+          currentRecipeId={plan[pickerTarget.dayIdx]?.[pickerTarget.type] || null}
+          profile={profile}
+          customRecipes={customRecipes || { midi: [], soir: [] }}
+          storeProfileId={storeProfileId}
+          favoriteRecipeIds={favoriteRecipeIds}
+          selectedSeasonMonth={selectedSeasonMonth}
+          onToggleFavorite={onToggleFavorite}
+          onSelectRecipe={(dIdx, type, rId) => onSetMeal(dIdx, type, rId)}
+          onInspectRecipe={onInspectDish}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
     </div>
   );
 };

@@ -3,12 +3,29 @@ import { INGREDIENTS } from '../data/ingredients';
 import { Recipe } from '../types';
 import { calculateDishEstimatedCost } from '../utils/budget';
 import { calculateDishNutrition } from '../utils/nutrition';
-import { Check, CheckCircle2, Clock, Flame, Info, ShoppingCart, Sparkles, UtensilsCrossed, X } from 'lucide-react';
+import { analyzeRecipeSeasonality, MONTH_NAMES_FR } from '../utils/seasons';
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Clock,
+  Flame,
+  Heart,
+  Info,
+  Leaf,
+  ShoppingCart,
+  Sparkles,
+  UtensilsCrossed,
+  X
+} from 'lucide-react';
 
 interface DishDetailModalProps {
   recipe: Recipe | null;
   storeProfileId: string;
   isAddedToShopping?: boolean;
+  isFavorite?: boolean;
+  selectedSeasonMonth?: number;
+  onToggleFavorite?: (recipeId: string) => void;
   onClose: () => void;
   onCook?: (recipe: Recipe) => void;
   onAddToShopping?: (recipe: Recipe) => void;
@@ -18,6 +35,9 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
   recipe,
   storeProfileId,
   isAddedToShopping = false,
+  isFavorite = false,
+  selectedSeasonMonth = new Date().getMonth() + 1,
+  onToggleFavorite,
   onClose,
   onCook,
   onAddToShopping
@@ -26,6 +46,7 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
 
   const nutrition = calculateDishNutrition(recipe);
   const cost = calculateDishEstimatedCost(recipe, storeProfileId);
+  const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
 
   const getNutriScoreColor = (score: string) => {
     switch (score) {
@@ -54,7 +75,7 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
         {/* Header */}
         <div className="p-5 border-b border-[#E6E1D7] bg-white flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F4F1EB] text-[#433E37] border border-[#E6E1D7]">
                 {recipe.type === 'midi' ? '☀️ Midi' : '🌙 Soir'}
               </span>
@@ -62,18 +83,52 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
                 <Clock className="w-3.5 h-3.5" />
                 {recipe.time}
               </span>
+              {seasonAnalysis.hasSeasonalProduce && (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    seasonAnalysis.isAllInSeason
+                      ? 'bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]'
+                      : 'bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]'
+                  }`}
+                >
+                  <Leaf className="w-3 h-3" />
+                  <span>
+                    {seasonAnalysis.isAllInSeason
+                      ? `De saison (${MONTH_NAMES_FR[selectedSeasonMonth - 1]})`
+                      : `Produits hors saison en ${MONTH_NAMES_FR[selectedSeasonMonth - 1]}`}
+                  </span>
+                </span>
+              )}
             </div>
             <h3 className="text-xl font-bold text-[#433E37] leading-tight">
               {recipe.name}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-[#A39E93] hover:text-[#433E37] hover:bg-[#F4F1EB] rounded-lg transition-colors cursor-pointer"
-            aria-label="Fermer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-1">
+            {onToggleFavorite && (
+              <button
+                type="button"
+                onClick={() => onToggleFavorite(recipe.id)}
+                className="p-2 text-[#A39E93] hover:text-[#B84A39] hover:bg-[#FDF2F0] rounded-xl transition-colors cursor-pointer"
+                title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              >
+                <Heart
+                  className={`w-5 h-5 transition-transform active:scale-125 ${
+                    isFavorite ? 'text-[#B84A39] fill-[#B84A39]' : 'hover:fill-[#B84A39]/20'
+                  }`}
+                />
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 text-[#A39E93] hover:text-[#433E37] hover:bg-[#F4F1EB] rounded-xl transition-colors cursor-pointer"
+              aria-label="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -124,6 +179,41 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
               <span className="text-[10px] text-[#A39E93] mt-1">Équilibre</span>
             </div>
           </div>
+
+          {/* Seasonality Detail Card if recipe contains fresh produce */}
+          {seasonAnalysis.hasSeasonalProduce && (
+            <div className={`p-4 rounded-xl border space-y-2 ${
+              seasonAnalysis.isAllInSeason
+                ? 'bg-[#EBF2EA]/60 border-[#D1E0CE]'
+                : 'bg-[#FDF6EE]/80 border-[#F4DECA]'
+            }`}>
+              <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#433E37]">
+                <Leaf className="w-3.5 h-3.5 text-[#3D593A]" />
+                <span>Saisonnalité des fruits et légumes ({MONTH_NAMES_FR[selectedSeasonMonth - 1]})</span>
+              </h4>
+
+              {seasonAnalysis.isAllInSeason ? (
+                <p className="text-xs text-[#3D593A] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-[#8BA888]" />
+                  <span>Tous les légumes et fruits de cette recette sont en pleine saison ! Disponibles au meilleur prix et goût optimal.</span>
+                </p>
+              ) : (
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-[#D97706] font-semibold">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-[#D97706]" />
+                    <span>Certains ingrédients frais ne sont pas de saison en ce moment :</span>
+                  </div>
+                  <ul className="pl-5 list-disc space-y-0.5 text-[#7D7569]">
+                    {seasonAnalysis.outOfSeasonProduce.map(p => (
+                      <li key={p.id}>
+                        <strong className="text-[#433E37]">{p.name}</strong> : saison idéale en {p.bestMonths} (peut être plus cher ou sous serre).
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Macro Nutrient Breakdown Bar */}
           <div className="p-4 bg-white rounded-xl border border-[#E6E1D7] space-y-3">

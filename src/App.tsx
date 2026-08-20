@@ -18,6 +18,7 @@ import { DayMealPlan, MealType, Recipe, StudentProfile } from './types';
 import { computeMonthlyBudgetStats, computeReceipt } from './utils/budget';
 import { calculateWeeklyNutrition, findRecipeById, getAllRecipes } from './utils/nutrition';
 import { generateEcoPlan, generateWeekPlan } from './utils/planner';
+import { getCurrentMonth } from './utils/seasons';
 import { BookOpen, CookingPot, Lightbulb, Plus, Sparkles, Utensils } from 'lucide-react';
 
 const STORAGE_KEY = 'carnet_etudiant_state_v1';
@@ -73,7 +74,9 @@ function migrateSavedState(raw: any) {
     storeProfileId: typeof raw.storeProfileId === 'string' ? raw.storeProfileId : 'standard',
     customRecipes: cleanCustomRecipes,
     extraShoppingRecipeIds: Array.isArray(raw.extraShoppingRecipeIds) ? raw.extraShoppingRecipeIds : [],
-    actualPaidAmount: typeof raw.actualPaidAmount === 'number' ? raw.actualPaidAmount : null
+    actualPaidAmount: typeof raw.actualPaidAmount === 'number' ? raw.actualPaidAmount : null,
+    favoriteRecipeIds: Array.isArray(raw.favoriteRecipeIds) ? raw.favoriteRecipeIds : [],
+    selectedSeasonMonth: typeof raw.selectedSeasonMonth === 'number' ? raw.selectedSeasonMonth : getCurrentMonth()
   };
 }
 
@@ -92,6 +95,8 @@ export default function App() {
   });
   const [extraShoppingRecipeIds, setExtraShoppingRecipeIds] = useState<string[]>([]);
   const [actualPaidAmount, setActualPaidAmount] = useState<number | null>(null);
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<string[]>([]);
+  const [selectedSeasonMonth, setSelectedSeasonMonth] = useState<number>(getCurrentMonth());
 
   // Active View Tab
   const [activeTab, setActiveTab] = useState<'planning' | 'recipes' | 'shopping' | 'budget' | 'nutrition' | 'tools'>('planning');
@@ -123,6 +128,8 @@ export default function App() {
           if (migrated.customRecipes) setCustomRecipes(migrated.customRecipes);
           if (migrated.extraShoppingRecipeIds) setExtraShoppingRecipeIds(migrated.extraShoppingRecipeIds);
           if (migrated.actualPaidAmount !== null) setActualPaidAmount(migrated.actualPaidAmount);
+          if (migrated.favoriteRecipeIds) setFavoriteRecipeIds(migrated.favoriteRecipeIds);
+          if (migrated.selectedSeasonMonth) setSelectedSeasonMonth(migrated.selectedSeasonMonth);
         }
       }
     } catch (e) {
@@ -144,19 +151,28 @@ export default function App() {
         storeProfileId,
         customRecipes,
         extraShoppingRecipeIds,
-        actualPaidAmount
+        actualPaidAmount,
+        favoriteRecipeIds,
+        selectedSeasonMonth
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {
       console.warn('Failed to save state to localStorage', e);
     }
-  }, [profile, weekPlan, fridge, completedMeals, extraItems, notes, storeProfileId, customRecipes, extraShoppingRecipeIds, actualPaidAmount]);
+  }, [profile, weekPlan, fridge, completedMeals, extraItems, notes, storeProfileId, customRecipes, extraShoppingRecipeIds, actualPaidAmount, favoriteRecipeIds, selectedSeasonMonth]);
 
   // Initial Onboarding completion
   const handleOnboardingComplete = (newProfile: StudentProfile) => {
     setProfile(newProfile);
     const initialPlan = generateWeekPlan(newProfile, customRecipes);
     setWeekPlan(initialPlan);
+  };
+
+  // Toggle Favorite
+  const handleToggleFavorite = (recipeId: string) => {
+    setFavoriteRecipeIds(prev =>
+      prev.includes(recipeId) ? prev.filter(id => id !== recipeId) : [...prev, recipeId]
+    );
   };
 
   // Re-generate complete plan
@@ -218,10 +234,10 @@ export default function App() {
 
   // Fridge management & Deductions
   const handleAddFridgeItem = (id: string, qty: number) => {
-    setFridge(prev => {
-      const current = prev[id] || 0;
-      return { ...prev, [id]: Math.round((current + qty) * 10) / 10 };
-    });
+    setFridge(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + qty
+    }));
   };
 
   const handleRemoveFridgeItem = (id: string) => {
@@ -232,84 +248,81 @@ export default function App() {
     });
   };
 
+  // Toggle meal done and automatically deduct ingredients from fridge if available
   const handleToggleMealDone = (dayIdx: number, type: MealType) => {
     const key = `${dayIdx}-${type}`;
-    const recipeId = weekPlan[dayIdx]?.[type];
-    if (!recipeId) return;
-    const recipe = findRecipeById(type, recipeId, customRecipes);
-    if (!recipe) return;
+    const willBeDone = !completedMeals[key];
 
-    if (completedMeals[key]) {
-      // Annuler : on restitue les ingrédients dans le frigo
-      setFridge(prev => {
-        const next = { ...prev };
-        recipe.ingredients.forEach(({ id, qty }) => {
-          next[id] = Math.round(((next[id] || 0) + qty) * 10) / 10;
+    setCompletedMeals(prev => ({
+      ...prev,
+      [key]: willBeDone
+    }));
+
+    // If marked done, decrement ingredients from fridge if user had stock
+    const recipeId = weekPlan[dayIdx]?.[type];
+    if (willBeDone && recipeId) {
+      const recipe = findRecipeById(type, recipeId, customRecipes);
+      if (recipe) {
+        setFridge(prevFridge => {
+          const updated = { ...prevFridge };
+          recipe.ingredients.forEach(ing => {
+            if (updated[ing.id] !== undefined && updated[ing.id] > 0) {
+              updated[ing.id] = Math.max(0, updated[ing.id] - ing.qty);
+              if (updated[ing.id] === 0) {
+                delete updated[ing.id];
+              }
+            }
+          });
+          return updated;
         });
-        return next;
-      });
-      setCompletedMeals(prev => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    } else {
-      // Déduire du frigo si possible (ou déduire sans bloquer pour souplesse)
-      setFridge(prev => {
-        const next = { ...prev };
-        recipe.ingredients.forEach(({ id, qty }) => {
-          const current = next[id] || 0;
-          const remaining = Math.max(0, current - qty);
-          if (remaining <= 0.05) delete next[id];
-          else next[id] = Math.round(remaining * 10) / 10;
-        });
-        return next;
-      });
-      setCompletedMeals(prev => ({ ...prev, [key]: true }));
+      }
     }
   };
 
-  // Save custom recipe
-  const handleSaveCustomRecipe = (type: MealType, newRecipe: Recipe) => {
+  // Custom Recipes management
+  const handleSaveCustomRecipe = (newRecipe: Recipe) => {
     setCustomRecipes(prev => ({
       ...prev,
-      [type]: [...prev[type], newRecipe]
+      [newRecipe.type]: [...prev[newRecipe.type], newRecipe]
     }));
   };
 
-  // Update existing custom recipe
-  const handleUpdateCustomRecipe = (type: MealType, updatedRecipe: Recipe) => {
-    setCustomRecipes(prev => ({
-      ...prev,
-      [type]: prev[type].map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
-    }));
+  const handleUpdateCustomRecipe = (updatedRecipe: Recipe) => {
+    setCustomRecipes(prev => {
+      const type = updatedRecipe.type;
+      const list = prev[type].map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+      return {
+        ...prev,
+        [type]: list
+      };
+    });
   };
 
-  // Duplicate recipe handler
-  const handleDuplicateRecipe = (recipe: Recipe) => {
-    const duplicated: Recipe = {
-      ...recipe,
-      id: `custom-${Date.now()}`,
-      name: `${recipe.name} (Copie)`,
-      isCustom: true
-    };
-    setCustomRecipes(prev => ({
-      ...prev,
-      [recipe.type]: [...(prev[recipe.type] || []), duplicated]
-    }));
-  };
-
-  // Delete custom recipe
   const handleDeleteCustomRecipe = (type: MealType, recipeId: string) => {
     setCustomRecipes(prev => ({
       ...prev,
-      [type]: (prev[type] || []).filter(r => r.id !== recipeId)
+      [type]: prev[type].filter(r => r.id !== recipeId)
     }));
-    // Also remove from extra shopping list if present
+    // Also remove from extra shopping if present
     setExtraShoppingRecipeIds(prev => prev.filter(id => id !== recipeId));
+    setFavoriteRecipeIds(prev => prev.filter(id => id !== recipeId));
   };
 
-  // Edit custom recipe launcher
+  const handleDuplicateRecipe = (sourceRecipe: Recipe) => {
+    const duplicated: Recipe = {
+      ...sourceRecipe,
+      id: `custom-${Date.now()}`,
+      name: `${sourceRecipe.name} (Variante)`,
+      isCustom: true,
+      ingredients: sourceRecipe.ingredients.map(i => ({ ...i })),
+      steps: [...sourceRecipe.steps],
+      tags: sourceRecipe.tags ? [...sourceRecipe.tags, 'Personnalisé'] : ['Personnalisé']
+    };
+    handleSaveCustomRecipe(duplicated);
+    setEditingRecipe(duplicated);
+    setCustomRecipeOpen(true);
+  };
+
   const handleOpenEditRecipe = (recipe: Recipe) => {
     setEditingRecipe(recipe);
     setCustomRecipeOpen(true);
@@ -322,30 +335,21 @@ export default function App() {
     );
   };
 
-  const handleRemoveRecipeFromShopping = (recipeId: string) => {
-    setExtraShoppingRecipeIds(prev => prev.filter(id => id !== recipeId));
+  const handleBulkAddShoppingRecipes = (recipeIds: string[]) => {
+    setExtraShoppingRecipeIds(prev => Array.from(new Set([...prev, ...recipeIds])));
   };
 
-  const handleBulkAddShoppingRecipes = (recipeIds: string[]) => {
-    setExtraShoppingRecipeIds(prev => {
-      const set = new Set([...prev, ...recipeIds]);
-      return Array.from(set);
-    });
+  const handleRemoveRecipeFromShopping = (recipeId: string) => {
+    setExtraShoppingRecipeIds(prev => prev.filter(id => id !== recipeId));
   };
 
   const handleClearShoppingRecipes = () => {
     setExtraShoppingRecipeIds([]);
   };
 
-  // Save profile changes (e.g. equipment or shopping day)
-  const handleSaveProfile = (newProfile: StudentProfile) => {
-    setProfile(newProfile);
-    // If shopping day changed, reorder the week plan
-    if (profile?.shoppingDay !== newProfile.shoppingDay && weekPlan.length === 7) {
-      const newPlan = generateWeekPlan(newProfile, customRecipes);
-      setWeekPlan(newPlan);
-      setCompletedMeals({});
-    }
+  // Profile save
+  const handleSaveProfile = (updatedProfile: StudentProfile) => {
+    setProfile(updatedProfile);
   };
 
   // Insert recipe from Anti-Gaspi into the first available slot or current day
@@ -427,6 +431,10 @@ export default function App() {
             profile={profile}
             storeProfileId={storeProfileId}
             customRecipes={customRecipes}
+            favoriteRecipeIds={favoriteRecipeIds}
+            selectedSeasonMonth={selectedSeasonMonth}
+            onSelectSeasonMonth={setSelectedSeasonMonth}
+            onToggleFavorite={handleToggleFavorite}
             onToggleMealDone={handleToggleMealDone}
             onSetMeal={handleSetMeal}
             onSwapMeals={handleSwapMeals}
@@ -442,6 +450,10 @@ export default function App() {
             storeProfileId={storeProfileId}
             extraShoppingRecipeIds={extraShoppingRecipeIds}
             weekPlan={weekPlan}
+            favoriteRecipeIds={favoriteRecipeIds}
+            selectedSeasonMonth={selectedSeasonMonth}
+            onSelectSeasonMonth={setSelectedSeasonMonth}
+            onToggleFavorite={handleToggleFavorite}
             onOpenCreateRecipe={() => {
               setEditingRecipe(null);
               setCustomRecipeOpen(true);
@@ -591,6 +603,9 @@ export default function App() {
         recipe={inspectedRecipe}
         storeProfileId={storeProfileId}
         isAddedToShopping={inspectedRecipe ? extraShoppingRecipeIds.includes(inspectedRecipe.id) : false}
+        isFavorite={inspectedRecipe ? favoriteRecipeIds.includes(inspectedRecipe.id) : false}
+        selectedSeasonMonth={selectedSeasonMonth}
+        onToggleFavorite={handleToggleFavorite}
         onClose={() => setInspectedRecipe(null)}
         onAddToShopping={(recipe) => {
           if (extraShoppingRecipeIds.includes(recipe.id)) {
