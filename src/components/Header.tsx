@@ -4,6 +4,8 @@ import {
   BookOpen,
   Calendar,
   ChefHat,
+  Cloud,
+  CloudCheck,
   CookingPot,
   Dices,
   DollarSign,
@@ -13,8 +15,10 @@ import {
   Refrigerator,
   Settings,
   ShoppingCart,
+  Smartphone,
   Sparkles,
   TrendingDown,
+  User,
   UtensilsCrossed,
   Wallet
 } from 'lucide-react';
@@ -25,6 +29,9 @@ interface HeaderProps {
   budgetStats: MonthlyBudgetStats;
   nutritionStats: WeeklyNutritionStats;
   recipesCount?: number;
+  isCloudSynced?: boolean;
+  userEmail?: string | null;
+  onOpenAuthModal?: () => void;
   onSelectTab: (tab: 'planning' | 'recipes' | 'shopping' | 'budget' | 'nutrition' | 'tools') => void;
   onOpenSettings: () => void;
   onGenerateRandom: () => void;
@@ -40,6 +47,9 @@ export const Header: React.FC<HeaderProps> = ({
   budgetStats,
   nutritionStats,
   recipesCount = 28,
+  isCloudSynced = false,
+  userEmail = null,
+  onOpenAuthModal,
   onSelectTab,
   onOpenSettings,
   onGenerateRandom,
@@ -99,8 +109,32 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Quick Generator Actions */}
+          {/* Quick Generator Actions + Cloud Synced status */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Supabase Cloud Sync button */}
+            {onOpenAuthModal && (
+              <button
+                type="button"
+                onClick={onOpenAuthModal}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isCloudSynced
+                    ? 'bg-[#EBF2EA] hover:bg-[#DDE9DB] text-[#3D593A] border border-[#D1E0CE] shadow-2xs'
+                    : 'bg-[#FAF8F5] hover:bg-[#F4F1EB] text-[#7D7569] hover:text-[#433E37] border border-[#DCD6CB]'
+                }`}
+                title={isCloudSynced ? `Connecté (${userEmail || 'Cloud actif'}) - Synchronisation en direct` : 'Activer la synchronisation Cloud / Mobile'}
+              >
+                <Cloud className={`w-3.5 h-3.5 ${isCloudSynced ? 'text-[#3D593A]' : 'text-[#A39E93]'}`} />
+                <span>
+                  {isCloudSynced
+                    ? userEmail ? `${userEmail.split('@')[0]}` : 'Cloud Synchro'
+                    : 'Synchro Cloud'}
+                </span>
+                {isCloudSynced && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8BA888] animate-pulse" />
+                )}
+              </button>
+            )}
+
             <button
               onClick={onGenerateEco}
               className="px-3 py-1.5 bg-[#8BA888] hover:bg-[#799976] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-2xs transition-transform active:scale-95 cursor-pointer"

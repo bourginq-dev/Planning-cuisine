@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AntiGaspiModal } from './components/AntiGaspiModal';
+import { AuthModal } from './components/AuthModal';
 import { BatchPrepModal } from './components/BatchPrepModal';
 import { CookingModal } from './components/CookingModal';
 import { CustomRecipeModal } from './components/CustomRecipeModal';
@@ -19,6 +20,16 @@ import { computeMonthlyBudgetStats, computeReceipt } from './utils/budget';
 import { calculateWeeklyNutrition, findRecipeById, getAllRecipes } from './utils/nutrition';
 import { generateEcoPlan, generateWeekPlan } from './utils/planner';
 import { getCurrentMonth } from './utils/seasons';
+import { isSupabaseConfigured, supabase } from './utils/supabaseClient';
+import {
+  deleteCloudRecipe,
+  loadCloudData,
+  saveCloudRecipe,
+  subscribeToRealtimeChanges,
+  syncCloudProfile,
+  syncCloudShoppingData,
+  syncCloudWeeklyPlan
+} from './services/supabaseService';
 import { BookOpen, CookingPot, Lightbulb, Plus, Sparkles, Utensils } from 'lucide-react';
 
 const STORAGE_KEY = 'carnet_etudiant_state_v1';
@@ -81,6 +92,11 @@ function migrateSavedState(raw: any) {
 }
 
 export default function App() {
+  // Supabase Auth & Realtime State
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const isRemoteSyncingRef = useRef(false);
+
   // App State
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [weekPlan, setWeekPlan] = useState<DayMealPlan[]>([]);
@@ -110,7 +126,7 @@ export default function App() {
   const [inspectedRecipe, setInspectedRecipe] = useState<Recipe | null>(null);
   const [cookingRecipe, setCookingRecipe] = useState<{ recipe: Recipe; dayIdx: number; type: MealType } | null>(null);
 
-  // Load from localStorage on mount with migration
+  // 1. Load from localStorage on initial mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -137,9 +153,78 @@ export default function App() {
     }
   }, []);
 
-  // Save to localStorage whenever critical state changes
+  // 2. Supabase Auth state listener & Cloud fetch
+  const fetchCloudUserData = async (userId: string) => {
+    isRemoteSyncingRef.current = true;
+    try {
+      const cloudData = await loadCloudData(userId);
+      if (cloudData) {
+        if (cloudData.profile) setProfile(cloudData.profile);
+        if (cloudData.weekPlan && cloudData.weekPlan.length > 0) setWeekPlan(cloudData.weekPlan);
+        if (cloudData.completedMeals) setCompletedMeals(cloudData.completedMeals);
+        if (cloudData.fridge) setFridge(cloudData.fridge);
+        if (cloudData.extraItems) setExtraItems(cloudData.extraItems);
+        if (cloudData.notes !== undefined) setNotes(cloudData.notes);
+        if (cloudData.storeProfileId) setStoreProfileId(cloudData.storeProfileId);
+        if (cloudData.customRecipes) setCustomRecipes(cloudData.customRecipes);
+        if (cloudData.extraShoppingRecipeIds) setExtraShoppingRecipeIds(cloudData.extraShoppingRecipeIds);
+        if (cloudData.actualPaidAmount !== null) setActualPaidAmount(cloudData.actualPaidAmount);
+        if (cloudData.favoriteRecipeIds) setFavoriteRecipeIds(cloudData.favoriteRecipeIds);
+        if (cloudData.selectedSeasonMonth) setSelectedSeasonMonth(cloudData.selectedSeasonMonth);
+      }
+    } catch (err) {
+      console.warn('Erreur synchro cloud:', err);
+    } finally {
+      setTimeout(() => {
+        isRemoteSyncingRef.current = false;
+      }, 300);
+    }
+  };
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    // Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+        fetchCloudUserData(session.user.id);
+      }
+    });
+
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user || null;
+      setCurrentUser(user);
+      if (user) {
+        fetchCloudUserData(user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // 3. Realtime Subscription when User is logged in
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !currentUser) return;
+
+    const unsubscribe = subscribeToRealtimeChanges(currentUser.id, () => {
+      // Remote device made a change, refresh cloud data
+      fetchCloudUserData(currentUser.id);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser]);
+
+  // 4. Save to localStorage + Cloud whenever critical state changes
   useEffect(() => {
     if (!profile) return;
+
+    // Save to localStorage as local cache
     try {
       const payload = {
         profile,
@@ -159,7 +244,45 @@ export default function App() {
     } catch (e) {
       console.warn('Failed to save state to localStorage', e);
     }
-  }, [profile, weekPlan, fridge, completedMeals, extraItems, notes, storeProfileId, customRecipes, extraShoppingRecipeIds, actualPaidAmount, favoriteRecipeIds, selectedSeasonMonth]);
+
+    // Sync to Supabase Cloud if logged in and not currently applying remote sync
+    if (currentUser && !isRemoteSyncingRef.current && isSupabaseConfigured()) {
+      syncCloudProfile(currentUser.id, profile);
+      syncCloudWeeklyPlan(currentUser.id, weekPlan, completedMeals);
+      syncCloudShoppingData(currentUser.id, {
+        fridge,
+        extraItems,
+        notes,
+        storeProfileId,
+        extraShoppingRecipeIds,
+        actualPaidAmount,
+        favoriteRecipeIds,
+        selectedSeasonMonth
+      });
+    }
+  }, [
+    currentUser,
+    profile,
+    weekPlan,
+    fridge,
+    completedMeals,
+    extraItems,
+    notes,
+    storeProfileId,
+    customRecipes,
+    extraShoppingRecipeIds,
+    actualPaidAmount,
+    favoriteRecipeIds,
+    selectedSeasonMonth
+  ]);
+
+  // Logout handler
+  const handleSignOut = async () => {
+    if (isSupabaseConfigured()) {
+      await supabase.auth.signOut();
+    }
+    setCurrentUser(null);
+  };
 
   // Initial Onboarding completion
   const handleOnboardingComplete = (newProfile: StudentProfile) => {
@@ -285,6 +408,9 @@ export default function App() {
       ...prev,
       [newRecipe.type]: [...prev[newRecipe.type], newRecipe]
     }));
+    if (currentUser && isSupabaseConfigured()) {
+      saveCloudRecipe(currentUser.id, newRecipe);
+    }
   };
 
   const handleUpdateCustomRecipe = (updatedRecipe: Recipe) => {
@@ -296,6 +422,9 @@ export default function App() {
         [type]: list
       };
     });
+    if (currentUser && isSupabaseConfigured()) {
+      saveCloudRecipe(currentUser.id, updatedRecipe);
+    }
   };
 
   const handleDeleteCustomRecipe = (type: MealType, recipeId: string) => {
@@ -306,6 +435,9 @@ export default function App() {
     // Also remove from extra shopping if present
     setExtraShoppingRecipeIds(prev => prev.filter(id => id !== recipeId));
     setFavoriteRecipeIds(prev => prev.filter(id => id !== recipeId));
+    if (currentUser && isSupabaseConfigured()) {
+      deleteCloudRecipe(currentUser.id, recipeId);
+    }
   };
 
   const handleDuplicateRecipe = (sourceRecipe: Recipe) => {
@@ -410,6 +542,9 @@ export default function App() {
         budgetStats={budgetStats}
         nutritionStats={nutritionStats}
         recipesCount={allRecipes.length}
+        isCloudSynced={Boolean(currentUser)}
+        userEmail={currentUser?.email || null}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
         onSelectTab={setActiveTab}
         onOpenSettings={() => setSettingsOpen(true)}
         onGenerateRandom={handleGenerateRandom}
@@ -663,6 +798,19 @@ export default function App() {
         profile={profile}
         onClose={() => setSettingsOpen(false)}
         onSaveProfile={handleSaveProfile}
+      />
+
+      <AuthModal
+        isOpen={authModalOpen}
+        currentUserEmail={currentUser?.email || null}
+        currentUserId={currentUser?.id || null}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthSuccess={() => {
+          if (currentUser?.id) {
+            fetchCloudUserData(currentUser.id);
+          }
+        }}
+        onSignOut={handleSignOut}
       />
     </div>
   );
