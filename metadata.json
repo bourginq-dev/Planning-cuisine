@@ -1,0 +1,6 @@
+{
+  "name": "Planificateur de Repas & Budget Étudiant",
+  "description": "Application web complète de gestion des repas étudiants : planification hebdomadaire, liste de courses intelligente avec formats éco, suivi et optimiseur de budget mensuel, et visualiseur d'équilibre nutritionnel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

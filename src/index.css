@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #F9F7F2;
+    --text-main: #433E37;
+    --text-muted: #7D7569;
+    --card-bg: #FFFFFF;
+    --card-muted: #F4F1EB;
+    --border-color: #E6E1D7;
+    --accent-green: #8BA888;
+    --accent-green-light: #EBF2EA;
+    --accent-green-dark: #3D593A;
+    --accent-warm: #D97706;
+    --accent-warm-light: #FDF6EE;
+    --accent-dark: #433E37;
+    --taupe: #C2BBAF;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F9F7F2;
+    color: #433E37;
+  }
+
+  .font-mono-code {
+    font-family: 'Space Mono', monospace;
+  }
+}
+
+.torn-edge {
+  height: 14px;
+  background: linear-gradient(-45deg, #F4F1EB 50%, transparent 50%) 0 100% / 14px 14px repeat-x,
+              linear-gradient(45deg, #F4F1EB 50%, transparent 50%) 0 100% / 14px 14px repeat-x;
+}
+
+
