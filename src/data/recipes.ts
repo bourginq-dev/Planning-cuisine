@@ -841,7 +841,7 @@ export const BASE_RECIPES: Record<'midi' | 'soir', Recipe[]> = {
       ],
       ingredients: [
         { id: 'poulet', qty: 110 },
-        { id: 'brocoli', qty: 180 },
+        { id: 'brocoli', qty: 0.5 },
         { id: 'sauce_soja', qty: 20 },
         { id: 'riz', qty: 70 }
       ]
