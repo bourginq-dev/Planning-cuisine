@@ -1,8 +1,9 @@
 import { ALL_DAYS, BATCH_INGREDIENTS, INGREDIENTS, STORE_PROFILES } from '../data/ingredients';
 import { BASE_RECIPES } from '../data/recipes';
-import { DayMealPlan, MealType, Recipe, StudentProfile } from '../types';
+import { DayMealPlan, MealHistoryEntry, MealType, Recipe, SmartPlanningOptions, StudentProfile } from '../types';
 import { calculateBestPurchase, computeReceipt } from './budget';
 import { findRecipeById } from './nutrition';
+import { analyzeTupperwareCompatibility, searchSmartFridgeRecipes } from './tupperware';
 
 export function isRecipeAllowed(recipe: Recipe, equipment: StudentProfile): boolean {
   if (!equipment) return true;
@@ -43,33 +44,145 @@ export function isSeasonal(recipe: Recipe, currentMonth: number = new Date().get
   });
 }
 
+/**
+ * Smart recipe selector weighting:
+ * - Seasonality (+30 pts)
+ * - Avoid repetition from previous weeks (-80 pts if eaten last week, -30 pts if eaten 2 weeks ago)
+ * - Favorite frequency (boost +40 pts if favorite hasn't been served in >= 2 weeks, penalize -60 pts if served < 2 weeks ago)
+ * - Tupperware compatibility for lunch slots (+50 pts if tupperware-friendly for lunch)
+ * - Fridge leftovers emptying bonus (+60 pts if ingredients are already in fridge)
+ */
+export function pickSmartRecipe(
+  pool: Recipe[],
+  usedIds: Set<string>,
+  type: MealType,
+  options?: {
+    history?: MealHistoryEntry[];
+    favoriteRecipeIds?: string[];
+    currentWeekNumber?: number;
+    selectedMonth?: number;
+    tupperwareForLunch?: boolean;
+    fridge?: Record<string, number>;
+    customRecipes?: Record<MealType, Recipe[]>;
+  }
+): Recipe | null {
+  const available = pool.filter(r => !usedIds.has(r.id));
+  if (available.length === 0) {
+    const fallback = (BASE_RECIPES[type] || []).find(r => r.isFallback);
+    return fallback || pool[0] || null;
+  }
+
+  const currentMonth = options?.selectedMonth || new Date().getMonth() + 1;
+  const history = options?.history || [];
+  const favoriteRecipeIds = options?.favoriteRecipeIds || [];
+  const tupperwareForLunch = options?.tupperwareForLunch !== false;
+  const fridge = options?.fridge || {};
+  const now = Date.now();
+
+  // Score each candidate
+  const scored = available.map(recipe => {
+    let weight = 100; // base score
+
+    // 1. Seasonality
+    if (isSeasonal(recipe, currentMonth)) {
+      weight += 35;
+    }
+
+    // 2. Repetition Avoidance (Check history with timestamps or week numbers)
+    const historyEntries = history.filter(h => h.recipeId === recipe.id);
+    if (historyEntries.length > 0) {
+      let mostRecentDaysAgo = 999;
+      historyEntries.forEach(h => {
+        if (h.cookedAt) {
+          const days = (now - h.cookedAt) / (1000 * 3600 * 24);
+          if (days < mostRecentDaysAgo) mostRecentDaysAgo = days;
+        } else if (h.weekNumber) {
+          const curWeek = options?.currentWeekNumber || 1;
+          const days = Math.max(0, (curWeek - h.weekNumber) * 7);
+          if (days < mostRecentDaysAgo) mostRecentDaysAgo = days;
+        } else if (h.date) {
+          const diff = (now - new Date(h.date).getTime()) / (1000 * 3600 * 24);
+          if (!isNaN(diff) && diff < mostRecentDaysAgo) mostRecentDaysAgo = diff;
+        }
+      });
+
+      if (mostRecentDaysAgo < 7) {
+        weight -= 85; // Eaten within the last 7 days: strongly avoid
+      } else if (mostRecentDaysAgo < 14) {
+        weight -= 40; // Eaten within last 2 weeks: moderate penalty
+      }
+    }
+
+    // 3. Favorite prioritization (Max 1 time every 2 weeks rule)
+    const isFav = favoriteRecipeIds.includes(recipe.id);
+    if (isFav) {
+      let mostRecentDaysAgo = 999;
+      historyEntries.forEach(h => {
+        if (h.cookedAt) {
+          const days = (now - h.cookedAt) / (1000 * 3600 * 24);
+          if (days < mostRecentDaysAgo) mostRecentDaysAgo = days;
+        } else if (h.weekNumber) {
+          const curWeek = options?.currentWeekNumber || 1;
+          const days = Math.max(0, (curWeek - h.weekNumber) * 7);
+          if (days < mostRecentDaysAgo) mostRecentDaysAgo = days;
+        }
+      });
+
+      if (mostRecentDaysAgo >= 14) {
+        // Favorite not eaten for at least 2 weeks: boost priority!
+        weight += 50;
+      } else {
+        // Favorite was eaten recently (< 2 weeks): avoid repeating too soon
+        weight -= 50;
+      }
+    }
+
+    // 4. Tupperware management for Lunch (Midi)
+    if (type === 'midi' && tupperwareForLunch) {
+      const tup = analyzeTupperwareCompatibility(recipe);
+      if (tup.isTupperwareFriendly) {
+        weight += 35;
+      }
+      if (tup.canEatCold) {
+        weight += 20; // super convenient for student tupperwares on campus
+      }
+    }
+
+    // 5. Fridge Emptying Bonus (utilise les restes du frigo)
+    let fridgeMatchCount = 0;
+    recipe.ingredients.forEach(ing => {
+      if (fridge[ing.id] && fridge[ing.id] > 0) {
+        fridgeMatchCount++;
+      }
+    });
+    if (fridgeMatchCount > 0) {
+      weight += Math.min(70, fridgeMatchCount * 25);
+    }
+
+    return { recipe, weight: Math.max(5, weight) };
+  });
+
+  // Roulette wheel weighted selection
+  const totalWeight = scored.reduce((sum, item) => sum + item.weight, 0);
+  let randomVal = Math.random() * totalWeight;
+
+  for (const item of scored) {
+    if (randomVal <= item.weight) {
+      return item.recipe;
+    }
+    randomVal -= item.weight;
+  }
+
+  return scored[0]?.recipe || available[0] || null;
+}
+
 export function pickRandomRecipe(
   pool: Recipe[],
   usedIds: Set<string>,
   type: MealType,
   customRecipes?: Record<MealType, Recipe[]>
 ): Recipe | null {
-  const available = pool.filter(r => !usedIds.has(r.id));
-  if (available.length === 0) {
-    // Fallback explicite
-    const fallback = (BASE_RECIPES[type] || []).find(r => r.isFallback);
-    return fallback || pool[0] || null;
-  }
-
-  const currentMonth = new Date().getMonth() + 1;
-  const seasonal = available.filter(r => isSeasonal(r, currentMonth));
-  const outOfSeason = available.filter(r => !isSeasonal(r, currentMonth));
-
-  if (seasonal.length > 0 && outOfSeason.length > 0) {
-    // Favoriser la saison à 75%
-    if (Math.random() < 0.75) {
-      return seasonal[Math.floor(Math.random() * seasonal.length)];
-    } else {
-      return outOfSeason[Math.floor(Math.random() * outOfSeason.length)];
-    }
-  }
-
-  return available[Math.floor(Math.random() * available.length)];
+  return pickSmartRecipe(pool, usedIds, type, { customRecipes });
 }
 
 export function getOrderedDays(shoppingDay: string = 'Lundi'): string[] {
@@ -80,7 +193,16 @@ export function getOrderedDays(shoppingDay: string = 'Lundi'): string[] {
 
 export function generateWeekPlan(
   profile: StudentProfile,
-  customRecipes?: Record<MealType, Recipe[]>
+  customRecipes?: Record<MealType, Recipe[]>,
+  options?: {
+    history?: MealHistoryEntry[];
+    favoriteRecipeIds?: string[];
+    currentWeekNumber?: number;
+    selectedMonth?: number;
+    fridge?: Record<string, number>;
+    tupperwareForLunch?: boolean;
+    prioritizeFridgeFirst?: boolean;
+  }
 ): DayMealPlan[] {
   const validSoir = getValidRecipes('soir', profile, customRecipes);
   const validMidi = getValidRecipes('midi', profile, customRecipes);
@@ -88,12 +210,23 @@ export function generateWeekPlan(
   const mealSchedule = profile.mealSchedule;
 
   const usedSoir = new Set<string>();
+  const usedMidi = new Set<string>();
   const soirPicks: (string | null)[] = [];
+  const midiPicks: (string | null)[] = [];
+
+  // 1. Plan Dinners (Soir)
   for (let i = 0; i < orderedDays.length; i++) {
     const day = orderedDays[i];
     const isSoirActive = mealSchedule && mealSchedule[day] ? mealSchedule[day].soir : true;
     if (isSoirActive) {
-      const pick = pickRandomRecipe(validSoir, usedSoir, 'soir', customRecipes);
+      const pick = pickSmartRecipe(validSoir, usedSoir, 'soir', {
+        history: options?.history,
+        favoriteRecipeIds: options?.favoriteRecipeIds,
+        currentWeekNumber: options?.currentWeekNumber,
+        selectedMonth: options?.selectedMonth,
+        fridge: options?.fridge,
+        customRecipes
+      });
       soirPicks.push(pick ? pick.id : null);
       if (pick) usedSoir.add(pick.id);
     } else {
@@ -101,13 +234,20 @@ export function generateWeekPlan(
     }
   }
 
-  const usedMidi = new Set<string>();
-  const midiPicks: (string | null)[] = [];
+  // 2. Plan Lunches (Midi) with Tupperware logic
   for (let i = 0; i < orderedDays.length; i++) {
     const day = orderedDays[i];
     const isMidiActive = mealSchedule && mealSchedule[day] ? mealSchedule[day].midi : true;
     if (isMidiActive) {
-      const pick = pickRandomRecipe(validMidi, usedMidi, 'midi', customRecipes);
+      const pick = pickSmartRecipe(validMidi, usedMidi, 'midi', {
+        history: options?.history,
+        favoriteRecipeIds: options?.favoriteRecipeIds,
+        currentWeekNumber: options?.currentWeekNumber,
+        selectedMonth: options?.selectedMonth,
+        fridge: options?.fridge,
+        tupperwareForLunch: options?.tupperwareForLunch !== false,
+        customRecipes
+      });
       midiPicks.push(pick ? pick.id : null);
       if (pick) usedMidi.add(pick.id);
     } else {
@@ -123,18 +263,68 @@ export function generateWeekPlan(
   }));
 }
 
+export function generateSmartAntiGaspiPlan(
+  fridge: Record<string, number>,
+  profile: StudentProfile,
+  storeProfileId: string = 'standard',
+  customRecipes?: Record<MealType, Recipe[]>,
+  options?: {
+    history?: MealHistoryEntry[];
+    favoriteRecipeIds?: string[];
+    currentWeekNumber?: number;
+    selectedMonth?: number;
+    tupperwareForLunch?: boolean;
+  }
+): { plan: DayMealPlan[]; matchesCount: number } {
+  // First, find fridge-emptying recipes
+  const matches = searchSmartFridgeRecipes(fridge, profile, storeProfileId, customRecipes, {
+    minFridgeMatch: 1
+  });
+
+  const basePlan = generateWeekPlan(profile, customRecipes, {
+    ...options,
+    fridge,
+    prioritizeFridgeFirst: true
+  });
+
+  // Inject top fridge matches into early days of the week (to consume perishables first)
+  let matchIdx = 0;
+  for (let d = 0; d < basePlan.length && matchIdx < matches.length; d++) {
+    const dayPlan = basePlan[d];
+    const match = matches[matchIdx];
+
+    if (match.type === 'midi' && dayPlan.midi) {
+      dayPlan.midi = match.recipe.id;
+      matchIdx++;
+    } else if (match.type === 'soir' && dayPlan.soir) {
+      dayPlan.soir = match.recipe.id;
+      matchIdx++;
+    }
+  }
+
+  return { plan: basePlan, matchesCount: matchIdx };
+}
+
 export function generateEcoPlan(
   profile: StudentProfile,
   maxBudget: number,
   storeProfileId: string = 'standard',
-  customRecipes?: Record<MealType, Recipe[]>
+  customRecipes?: Record<MealType, Recipe[]>,
+  options?: {
+    history?: MealHistoryEntry[];
+    favoriteRecipeIds?: string[];
+    currentWeekNumber?: number;
+    selectedMonth?: number;
+    fridge?: Record<string, number>;
+    tupperwareForLunch?: boolean;
+  }
 ): { plan: DayMealPlan[]; grandTotal: number } | null {
   let bestPlan: DayMealPlan[] | null = null;
   let bestCost = Infinity;
 
   // Essayer 60 simulations pour trouver le meilleur compromis
   for (let i = 0; i < 60; i++) {
-    const candidate = generateWeekPlan(profile, customRecipes);
+    const candidate = generateWeekPlan(profile, customRecipes, options);
     const receipt = computeReceipt(candidate, {}, {}, storeProfileId, customRecipes);
     if (receipt.grandTotal < bestCost) {
       bestCost = receipt.grandTotal;

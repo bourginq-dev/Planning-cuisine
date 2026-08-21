@@ -51,6 +51,23 @@ export interface DayMealPlan {
 
 export type MealSchedule = Record<string, { midi: boolean; soir: boolean }>;
 
+export interface MealHistoryEntry {
+  recipeId: string;
+  recipeName?: string;
+  date?: string;
+  cookedAt?: number;
+  weekNumber?: number;
+  type?: MealType;
+  wasCompleted?: boolean;
+}
+
+export interface SmartPlanningOptions {
+  prioritizeFridge?: boolean;
+  tupperwareForLunch?: boolean;
+  avoidWeeklyRepetitions?: boolean;
+  prioritizeFavoritesBiweekly?: boolean;
+}
+
 export const DEFAULT_MEAL_SCHEDULE: MealSchedule = {
   'Lundi': { midi: true, soir: true },
   'Mardi': { midi: true, soir: true },

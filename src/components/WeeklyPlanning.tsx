@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealSchedule, MealType, Recipe, StudentProfile } from '../types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealHistoryEntry, MealSchedule, MealType, Recipe, StudentProfile } from '../types';
 import { calculateDishEstimatedCost } from '../utils/budget';
 import { calculateDishNutrition, findRecipeById } from '../utils/nutrition';
-import { getValidRecipes, pickRandomRecipe } from '../utils/planner';
+import { getValidRecipes, pickSmartRecipe } from '../utils/planner';
 import {
   analyzeRecipeSeasonality,
   getCurrentMonth,
@@ -10,9 +10,11 @@ import {
   MONTH_NAMES_FR,
   SEASONS
 } from '../utils/seasons';
+import { analyzeTupperwareCompatibility } from '../utils/tupperware';
 import {
   ArrowLeftRight,
   Ban,
+  Briefcase,
   Calendar,
   Check,
   CheckCircle2,
@@ -43,6 +45,8 @@ interface WeeklyPlanningProps {
   storeProfileId: string;
   customRecipes?: Record<MealType, Recipe[]>;
   favoriteRecipeIds: string[];
+  history?: MealHistoryEntry[];
+  fridge?: Record<string, number>;
   selectedSeasonMonth: number;
   onSelectSeasonMonth: (month: number) => void;
   onToggleFavorite: (recipeId: string) => void;
@@ -62,6 +66,8 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   storeProfileId,
   customRecipes,
   favoriteRecipeIds,
+  history,
+  fridge,
   selectedSeasonMonth,
   onSelectSeasonMonth,
   onToggleFavorite,
@@ -136,7 +142,13 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
     if (current) used.add(current);
 
     const pool = getValidRecipes(type, profile, customRecipes);
-    const pick = pickRandomRecipe(pool, used, type, customRecipes);
+    const pick = pickSmartRecipe(pool, used, type, {
+      selectedMonth: selectedSeasonMonth,
+      history,
+      favoriteRecipeIds,
+      fridge,
+      tupperwareForLunch: type === 'midi'
+    });
     if (!pick) {
       alert("Aucune autre recette disponible avec votre équipement actuel.");
       return;
@@ -148,7 +160,13 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   const handleAddSlot = (dayIdx: number, type: MealType) => {
     const used = new Set(plan.map(d => d[type]).filter(Boolean) as string[]);
     const pool = getValidRecipes(type, profile, customRecipes);
-    const pick = pickRandomRecipe(pool, used, type, customRecipes);
+    const pick = pickSmartRecipe(pool, used, type, {
+      selectedMonth: selectedSeasonMonth,
+      history,
+      favoriteRecipeIds,
+      fridge,
+      tupperwareForLunch: type === 'midi'
+    });
     if (pick) {
       onSetMeal(dayIdx, type, pick.id);
     }
@@ -524,6 +542,21 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                                 }
                               >
                                 {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                              </span>
+                            )}
+
+                            {/* Tupperware Indicator for Lunch */}
+                            {type === 'midi' && analyzeTupperwareCompatibility(recipe).isTupperwareFriendly && (
+                              <span
+                                className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE] flex items-center gap-1"
+                                title={
+                                  analyzeTupperwareCompatibility(recipe).canEatCold
+                                    ? 'Parfait en Tupperware : Dégustation froide possible'
+                                    : 'Parfait en Tupperware : Réchauffable au micro-ondes'
+                                }
+                              >
+                                <Briefcase className="w-2.5 h-2.5" />
+                                {analyzeTupperwareCompatibility(recipe).canEatCold ? 'Froid' : 'Micro-ondes'}
                               </span>
                             )}
 

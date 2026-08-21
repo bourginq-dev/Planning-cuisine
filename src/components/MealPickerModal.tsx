@@ -6,7 +6,9 @@ import { calculateDishEstimatedCost, isPremiumRecipe } from '../utils/budget';
 import { calculateDishNutrition } from '../utils/nutrition';
 import { getValidRecipes, isRecipeAllowed } from '../utils/planner';
 import { analyzeRecipeSeasonality, MONTH_NAMES_FR } from '../utils/seasons';
+import { analyzeTupperwareCompatibility } from '../utils/tupperware';
 import {
+  Briefcase,
   Check,
   ChefHat,
   Clock,
@@ -53,6 +55,7 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFavoriteOnly, setFilterFavoriteOnly] = useState(false);
   const [filterSeasonalOnly, setFilterSeasonalOnly] = useState(false);
+  const [filterTupperwareOnly, setFilterTupperwareOnly] = useState(false);
   const [filterQuickOnly, setFilterQuickOnly] = useState(false);
   const [filterVeggieOnly, setFilterVeggieOnly] = useState(false);
   const [filterEquipmentMatch, setFilterEquipmentMatch] = useState(true);
@@ -92,6 +95,12 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
       if (filterSeasonalOnly) {
         const season = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
         if (!season.isAllInSeason) return false;
+      }
+
+      // 2b. Tupperware only
+      if (filterTupperwareOnly) {
+        const tup = analyzeTupperwareCompatibility(recipe);
+        if (!tup.isTupperwareFriendly) return false;
       }
 
       // 3. Quick (< 15 min)
@@ -293,6 +302,20 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
               <span>🌱 De saison</span>
             </button>
 
+            {/* Tupperware Midi Toggle */}
+            <button
+              onClick={() => setFilterTupperwareOnly(!filterTupperwareOnly)}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                filterTupperwareOnly
+                  ? 'bg-[#3D593A] text-white shadow-2xs'
+                  : 'bg-[#FAF8F5] text-[#7D7569] hover:text-[#3D593A] hover:bg-[#EBF2EA] border border-[#E6E1D7]'
+              }`}
+              title="Recettes idéales pour emporter le midi (lunchbox, froids ou micro-ondes)"
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>🍱 Tupperware</span>
+            </button>
+
             {/* Budget / Plus cher Toggle */}
             <button
               onClick={() => setFilterBudget(filterBudget === 'premium' ? 'all' : 'premium')}
@@ -476,6 +499,17 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
                               title="Recette plaisir / ingrédients plus chers"
                             >
                               💎 Plus cher
+                            </span>
+                          )}
+
+                          {/* Tupperware Badge */}
+                          {analyzeTupperwareCompatibility(recipe).isTupperwareFriendly && (
+                            <span
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE] flex items-center gap-1"
+                              title="Idéal pour emporter le midi"
+                            >
+                              <Briefcase className="w-2.5 h-2.5" />
+                              Tupperware
                             </span>
                           )}
 

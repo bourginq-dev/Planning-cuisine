@@ -15,10 +15,10 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShoppingList } from './components/ShoppingList';
 import { WeeklyPlanning } from './components/WeeklyPlanning';
 import { BASE_RECIPES } from './data/recipes';
-import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealType, Recipe, StudentProfile } from './types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealHistoryEntry, MealType, Recipe, StudentProfile } from './types';
 import { computeMonthlyBudgetStats, computeReceipt } from './utils/budget';
 import { calculateWeeklyNutrition, findRecipeById, getAllRecipes } from './utils/nutrition';
-import { generateEcoPlan, generateWeekPlan } from './utils/planner';
+import { generateEcoPlan, generateSmartAntiGaspiPlan, generateWeekPlan } from './utils/planner';
 import { getCurrentMonth } from './utils/seasons';
 import { isSupabaseConfigured, supabase } from './utils/supabaseClient';
 import {
@@ -87,6 +87,7 @@ function migrateSavedState(raw: any) {
     extraShoppingRecipeIds: Array.isArray(raw.extraShoppingRecipeIds) ? raw.extraShoppingRecipeIds : [],
     actualPaidAmount: typeof raw.actualPaidAmount === 'number' ? raw.actualPaidAmount : null,
     favoriteRecipeIds: Array.isArray(raw.favoriteRecipeIds) ? raw.favoriteRecipeIds : [],
+    history: Array.isArray(raw.history) ? raw.history : [],
     selectedSeasonMonth: typeof raw.selectedSeasonMonth === 'number' ? raw.selectedSeasonMonth : getCurrentMonth()
   };
 }
@@ -102,6 +103,7 @@ export default function App() {
   const [weekPlan, setWeekPlan] = useState<DayMealPlan[]>([]);
   const [fridge, setFridge] = useState<Record<string, number>>({});
   const [completedMeals, setCompletedMeals] = useState<Record<string, boolean>>({});
+  const [history, setHistory] = useState<MealHistoryEntry[]>([]);
   const [extraItems, setExtraItems] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [storeProfileId, setStoreProfileId] = useState<string>('standard');
@@ -145,6 +147,7 @@ export default function App() {
           if (migrated.extraShoppingRecipeIds) setExtraShoppingRecipeIds(migrated.extraShoppingRecipeIds);
           if (migrated.actualPaidAmount !== null) setActualPaidAmount(migrated.actualPaidAmount);
           if (migrated.favoriteRecipeIds) setFavoriteRecipeIds(migrated.favoriteRecipeIds);
+          if (migrated.history) setHistory(migrated.history);
           if (migrated.selectedSeasonMonth) setSelectedSeasonMonth(migrated.selectedSeasonMonth);
         }
       }
@@ -238,6 +241,7 @@ export default function App() {
         extraShoppingRecipeIds,
         actualPaidAmount,
         favoriteRecipeIds,
+        history,
         selectedSeasonMonth
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -266,6 +270,7 @@ export default function App() {
     weekPlan,
     fridge,
     completedMeals,
+    history,
     extraItems,
     notes,
     storeProfileId,
@@ -298,22 +303,87 @@ export default function App() {
     );
   };
 
-  // Re-generate complete plan
+  // Archive completed meals of current week into history to avoid repetition
+  const archiveCurrentWeekToHistory = () => {
+    if (!weekPlan || weekPlan.length === 0) return;
+    const now = Date.now();
+    const newEntries: MealHistoryEntry[] = [];
+
+    weekPlan.forEach((d, dayIdx) => {
+      (['midi', 'soir'] as MealType[]).forEach(type => {
+        const recipeId = d[type];
+        if (recipeId) {
+          // If completed, or simply planned in recent week
+          const wasCompleted = Boolean(completedMeals[`${dayIdx}-${type}`]);
+          newEntries.push({
+            recipeId,
+            cookedAt: now - (7 - dayIdx) * 24 * 3600 * 1000,
+            type,
+            wasCompleted
+          });
+        }
+      });
+    });
+
+    if (newEntries.length > 0) {
+      setHistory(prev => {
+        // Keep last 60 entries (around 4-5 weeks of meals)
+        const combined = [...newEntries, ...prev];
+        return combined.slice(0, 60);
+      });
+    }
+  };
+
+  // Re-generate complete plan with smart logic
   const handleGenerateRandom = () => {
     if (!profile) return;
-    const newPlan = generateWeekPlan(profile, customRecipes);
+    archiveCurrentWeekToHistory();
+    const newPlan = generateWeekPlan(profile, customRecipes, {
+      selectedMonth: selectedSeasonMonth,
+      history,
+      favoriteRecipeIds,
+      fridge,
+      tupperwareForLunch: true
+    });
     setWeekPlan(newPlan);
     setCompletedMeals({});
   };
 
   const handleGenerateEco = () => {
     if (!profile) return;
+    archiveCurrentWeekToHistory();
     const targetBudgetWeekly = profile.monthlyBudget ? profile.monthlyBudget / 4.33 : 35;
-    const ecoResult = generateEcoPlan(profile, targetBudgetWeekly, storeProfileId, customRecipes);
+    const ecoResult = generateEcoPlan(profile, targetBudgetWeekly, storeProfileId, customRecipes, {
+      selectedMonth: selectedSeasonMonth,
+      history,
+      favoriteRecipeIds,
+      fridge,
+      tupperwareForLunch: true
+    });
     if (ecoResult) {
       setWeekPlan(ecoResult.plan);
       setCompletedMeals({});
     }
+  };
+
+  const handleGenerateAntiGaspiPlan = () => {
+    if (!profile) return;
+    archiveCurrentWeekToHistory();
+    const antiGaspiResult = generateSmartAntiGaspiPlan(
+      fridge,
+      profile,
+      storeProfileId,
+      customRecipes,
+      {
+        selectedMonth: selectedSeasonMonth,
+        history,
+        favoriteRecipeIds,
+        tupperwareForLunch: true
+      }
+    );
+    setWeekPlan(antiGaspiResult.plan);
+    setCompletedMeals({});
+    setActiveTab('planning');
   };
 
   // Meal slot management
@@ -607,6 +677,8 @@ export default function App() {
             storeProfileId={storeProfileId}
             customRecipes={customRecipes}
             favoriteRecipeIds={favoriteRecipeIds}
+            history={history}
+            fridge={fridge}
             selectedSeasonMonth={selectedSeasonMonth}
             onSelectSeasonMonth={setSelectedSeasonMonth}
             onToggleFavorite={handleToggleFavorite}
@@ -814,6 +886,7 @@ export default function App() {
         customRecipes={customRecipes}
         onClose={() => setAntiGaspiOpen(false)}
         onSelectRecipeForPlan={handleSelectAntiGaspiRecipe}
+        onGenerateFullEmptyFridgePlan={handleGenerateAntiGaspiPlan}
       />
 
       <BatchPrepModal
