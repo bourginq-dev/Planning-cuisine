@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 import { ALL_DAYS } from '../data/ingredients';
-import { StudentProfile } from '../types';
-import { ChefHat, Flame, Settings, Sparkles, Utensils, X } from 'lucide-react';
+import { DEFAULT_MEAL_SCHEDULE, MealSchedule, StudentProfile } from '../types';
+import {
+  CalendarDays,
+  Check,
+  ChefHat,
+  Flame,
+  Moon,
+  Settings,
+  Sparkles,
+  Sun,
+  Utensils,
+  X
+} from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,8 +35,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [micro, setMicro] = useState(profile.micro);
   const [shoppingDay, setShoppingDay] = useState(profile.shoppingDay || 'Lundi');
   const [monthlyBudget, setMonthlyBudget] = useState(profile.monthlyBudget || 150);
+  const [mealSchedule, setMealSchedule] = useState<MealSchedule>(
+    profile.mealSchedule ? { ...DEFAULT_MEAL_SCHEDULE, ...profile.mealSchedule } : { ...DEFAULT_MEAL_SCHEDULE }
+  );
 
   if (!isOpen) return null;
+
+  const handleToggleSlot = (day: string, type: 'midi' | 'soir') => {
+    setMealSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [type]: !prev[day]?.[type]
+      }
+    }));
+  };
+
+  const setAllMeals = (active: boolean) => {
+    const next: MealSchedule = {};
+    ALL_DAYS.forEach(d => {
+      next[d] = { midi: active, soir: active };
+    });
+    setMealSchedule(next);
+  };
+
+  const setEveningsOnly = () => {
+    const next: MealSchedule = {};
+    ALL_DAYS.forEach(d => {
+      next[d] = { midi: false, soir: true };
+    });
+    setMealSchedule(next);
+  };
+
+  const setDinnersAndWeekend = () => {
+    const next: MealSchedule = {};
+    ALL_DAYS.forEach(d => {
+      const isWeekend = d === 'Samedi' || d === 'Dimanche';
+      next[d] = { midi: isWeekend, soir: true };
+    });
+    setMealSchedule(next);
+  };
+
+  const setLunchesOnly = () => {
+    const next: MealSchedule = {};
+    ALL_DAYS.forEach(d => {
+      next[d] = { midi: true, soir: false };
+    });
+    setMealSchedule(next);
+  };
+
+  // Count active meals
+  let totalActiveMeals = 0;
+  ALL_DAYS.forEach(d => {
+    if (mealSchedule[d]?.midi) totalActiveMeals++;
+    if (mealSchedule[d]?.soir) totalActiveMeals++;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +101,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       four,
       micro,
       shoppingDay,
-      monthlyBudget
+      monthlyBudget,
+      mealSchedule
     });
     onClose();
   };
@@ -79,6 +144,112 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full bg-white border border-[#DCD6CB] rounded-xl p-2.5 text-[#433E37] focus:outline-none focus:border-[#8BA888]"
               required
             />
+          </div>
+
+          {/* MEAL SCHEDULE SELECTOR */}
+          <div className="bg-white p-4 rounded-xl border border-[#E6E1D7] space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-[#433E37] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5 text-[#8BA888]" />
+                Repas cuisinés & consommés
+              </h4>
+              <span className="font-mono-code text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]">
+                {totalActiveMeals} / 14 repas
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#7D7569] leading-relaxed">
+              Cochez les repas que vous mangez chez vous. Les créneaux décochés ne généreront aucun plat ni ingrédient dans votre liste de courses.
+            </p>
+
+            {/* Quick preset buttons */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setAllMeals(true)}
+                className="text-[10px] font-bold px-2 py-1 bg-[#FAF8F5] hover:bg-[#F4F1EB] border border-[#DCD6CB] rounded-md text-[#433E37] cursor-pointer transition-colors"
+              >
+                Tous (14/14)
+              </button>
+              <button
+                type="button"
+                onClick={setEveningsOnly}
+                className="text-[10px] font-bold px-2 py-1 bg-[#FAF8F5] hover:bg-[#F4F1EB] border border-[#DCD6CB] rounded-md text-[#433E37] cursor-pointer transition-colors"
+              >
+                Soirs seuls (7/14)
+              </button>
+              <button
+                type="button"
+                onClick={setDinnersAndWeekend}
+                className="text-[10px] font-bold px-2 py-1 bg-[#FAF8F5] hover:bg-[#F4F1EB] border border-[#DCD6CB] rounded-md text-[#433E37] cursor-pointer transition-colors"
+              >
+                Soirs + Week-end (9/14)
+              </button>
+              <button
+                type="button"
+                onClick={setLunchesOnly}
+                className="text-[10px] font-bold px-2 py-1 bg-[#FAF8F5] hover:bg-[#F4F1EB] border border-[#DCD6CB] rounded-md text-[#433E37] cursor-pointer transition-colors"
+              >
+                Midis seuls (7/14)
+              </button>
+            </div>
+
+            {/* 7 Days Matrix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {ALL_DAYS.map(day => {
+                const midiActive = mealSchedule[day]?.midi ?? true;
+                const soirActive = mealSchedule[day]?.soir ?? true;
+                const isWeekend = day === 'Samedi' || day === 'Dimanche';
+
+                return (
+                  <div
+                    key={day}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
+                      isWeekend ? 'bg-[#FAF8F5] border-[#E6E1D7]' : 'bg-white border-[#EAE5DC]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-[#433E37] text-xs">{day}</span>
+                      {isWeekend && (
+                        <span className="text-[9px] text-[#D97706] font-semibold">WE</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Midi Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSlot(day, 'midi')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                          midiActive
+                            ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]'
+                            : 'bg-[#F4F1EB] text-[#A39E93] border-dashed border-[#DCD6CB] line-through'
+                        }`}
+                        title={midiActive ? `Désactiver déjeuner ${day}` : `Activer déjeuner ${day}`}
+                      >
+                        <Sun className={`w-3 h-3 ${midiActive ? 'text-[#D97706]' : 'text-[#A39E93]'}`} />
+                        <span>Midi</span>
+                      </button>
+
+                      {/* Soir Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSlot(day, 'soir')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                          soirActive
+                            ? 'bg-[#433E37] text-white border-[#322E28]'
+                            : 'bg-[#F4F1EB] text-[#A39E93] border-dashed border-[#DCD6CB] line-through'
+                        }`}
+                        title={soirActive ? `Désactiver dîner ${day}` : `Activer dîner ${day}`}
+                      >
+                        <Moon className={`w-3 h-3 ${soirActive ? 'text-[#FAD7A0]' : 'text-[#A39E93]'}`} />
+                        <span>Soir</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Kitchen Gear */}

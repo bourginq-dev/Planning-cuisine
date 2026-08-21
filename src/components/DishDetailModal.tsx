@@ -1,7 +1,7 @@
 import React from 'react';
 import { INGREDIENTS } from '../data/ingredients';
 import { Recipe } from '../types';
-import { calculateDishEstimatedCost } from '../utils/budget';
+import { calculateDishEstimatedCost, isPremiumRecipe } from '../utils/budget';
 import { calculateDishNutrition } from '../utils/nutrition';
 import { analyzeRecipeSeasonality, MONTH_NAMES_FR } from '../utils/seasons';
 import {
@@ -97,6 +97,11 @@ export const DishDetailModal: React.FC<DishDetailModalProps> = ({
                       ? `De saison (${MONTH_NAMES_FR[selectedSeasonMonth - 1]})`
                       : `Produits hors saison en ${MONTH_NAMES_FR[selectedSeasonMonth - 1]}`}
                   </span>
+                </span>
+              )}
+              {isPremiumRecipe(recipe, storeProfileId) && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+                  💎 Plus cher
                 </span>
               )}
             </div>

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { INGREDIENTS } from '../data/ingredients';
 import { BASE_RECIPES } from '../data/recipes';
 import { MealType, NutriScoreGrade, Recipe, StudentProfile } from '../types';
-import { calculateDishEstimatedCost } from '../utils/budget';
+import { calculateDishEstimatedCost, isPremiumRecipe } from '../utils/budget';
 import { calculateDishNutrition } from '../utils/nutrition';
 import { getValidRecipes, isRecipeAllowed } from '../utils/planner';
 import { analyzeRecipeSeasonality, MONTH_NAMES_FR } from '../utils/seasons';
@@ -56,6 +56,7 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
   const [filterQuickOnly, setFilterQuickOnly] = useState(false);
   const [filterVeggieOnly, setFilterVeggieOnly] = useState(false);
   const [filterEquipmentMatch, setFilterEquipmentMatch] = useState(true);
+  const [filterBudget, setFilterBudget] = useState<'all' | 'premium' | 'eco'>('all');
   const [selectedNutriScore, setSelectedNutriScore] = useState<NutriScoreGrade | 'all'>('all');
   const [sortBy, setSortBy] = useState<'recommended' | 'price-asc' | 'time' | 'nutri' | 'proteins-desc' | 'calories-asc'>('recommended');
 
@@ -105,18 +106,26 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
         if (!isVeggie) return false;
       }
 
-      // 5. Nutri-score
+      // 5. Budget tier
+      if (filterBudget === 'premium' && !isPremiumRecipe(recipe, storeProfileId)) {
+        return false;
+      }
+      if (filterBudget === 'eco' && isPremiumRecipe(recipe, storeProfileId)) {
+        return false;
+      }
+
+      // 6. Nutri-score
       if (selectedNutriScore !== 'all') {
         const nut = calculateDishNutrition(recipe);
         if (nut.nutriScore !== selectedNutriScore) return false;
       }
 
-      // 6. Equipment filter
+      // 7. Equipment filter
       if (filterEquipmentMatch && !isRecipeAllowed(recipe, profile)) {
         return false;
       }
 
-      // 7. Search text
+      // 8. Search text
       if (query) {
         const nameMatch = recipe.name.toLowerCase().includes(query);
         const tagMatch = recipe.tags?.some(t => t.toLowerCase().includes(query));
@@ -284,6 +293,31 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
               <span>🌱 De saison</span>
             </button>
 
+            {/* Budget / Plus cher Toggle */}
+            <button
+              onClick={() => setFilterBudget(filterBudget === 'premium' ? 'all' : 'premium')}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+                filterBudget === 'premium'
+                  ? 'bg-[#D97706] text-white shadow-2xs'
+                  : 'bg-[#FAF8F5] text-[#7D7569] hover:text-[#D97706] hover:bg-[#FEF3C7]/40 border border-[#E6E1D7]'
+              }`}
+              title="Afficher les recettes plaisir / plus élaborées"
+            >
+              <span>💎 Plus cher</span>
+            </button>
+
+            <button
+              onClick={() => setFilterBudget(filterBudget === 'eco' ? 'all' : 'eco')}
+              className={`px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+                filterBudget === 'eco'
+                  ? 'bg-[#8BA888] text-white shadow-2xs'
+                  : 'bg-[#FAF8F5] text-[#7D7569] hover:text-[#3D593A] hover:bg-[#EBF2EA] border border-[#E6E1D7]'
+              }`}
+              title="Afficher les recettes ultra-économiques"
+            >
+              <span>💰 Éco</span>
+            </button>
+
             {/* Quick < 15 min */}
             <button
               onClick={() => setFilterQuickOnly(!filterQuickOnly)}
@@ -432,6 +466,16 @@ export const MealPickerModal: React.FC<MealPickerModalProps> = ({
                               }
                             >
                               {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                            </span>
+                          )}
+
+                          {/* Plus cher / Premium badge */}
+                          {isPremiumRecipe(recipe, storeProfileId) && (
+                            <span
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] flex items-center gap-0.5"
+                              title="Recette plaisir / ingrédients plus chers"
+                            >
+                              💎 Plus cher
                             </span>
                           )}
 

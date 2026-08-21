@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DayMealPlan, MealType, Recipe, StudentProfile } from '../types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealSchedule, MealType, Recipe, StudentProfile } from '../types';
 import { calculateDishEstimatedCost } from '../utils/budget';
 import { calculateDishNutrition, findRecipeById } from '../utils/nutrition';
 import { getValidRecipes, pickRandomRecipe } from '../utils/planner';
@@ -12,6 +12,7 @@ import {
 } from '../utils/seasons';
 import {
   ArrowLeftRight,
+  Ban,
   Calendar,
   Check,
   CheckCircle2,
@@ -22,10 +23,13 @@ import {
   Heart,
   Info,
   Leaf,
+  Moon,
   Plus,
   RotateCcw,
   Search,
+  Settings,
   Sparkles,
+  Sun,
   Trash2,
   UtensilsCrossed
 } from 'lucide-react';
@@ -47,6 +51,8 @@ interface WeeklyPlanningProps {
   onSwapMeals: (d1: number, t1: MealType, d2: number, t2: MealType) => void;
   onInspectDish: (recipe: Recipe) => void;
   onCookDish: (recipe: Recipe, dayIdx: number, type: MealType) => void;
+  onToggleMealScheduleSlot?: (day: string, type: 'midi' | 'soir') => void;
+  onOpenSettings?: () => void;
 }
 
 export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
@@ -63,19 +69,29 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   onSetMeal,
   onSwapMeals,
   onInspectDish,
-  onCookDish
+  onCookDish,
+  onToggleMealScheduleSlot,
+  onOpenSettings
 }) => {
   const [swapSource, setSwapSource] = useState<{ dayIdx: number; type: MealType } | null>(null);
   const [pickerTarget, setPickerTarget] = useState<{ dayIdx: number; dayName: string; type: MealType } | null>(null);
+
+  const mealSchedule = profile.mealSchedule || DEFAULT_MEAL_SCHEDULE;
 
   // Time & progress stats
   let totalMinutes = 0;
   let totalMealsCount = 0;
   let doneMealsCount = 0;
   let seasonalMealsCount = 0;
+  let plannedSlotsCount = 0;
 
   plan.forEach((d, dIdx) => {
     (['midi', 'soir'] as MealType[]).forEach(type => {
+      const isSlotActive = mealSchedule[d.day]?.[type] ?? true;
+      if (isSlotActive) {
+        plannedSlotsCount++;
+      }
+
       const rid = d[type];
       if (!rid) return;
       totalMealsCount++;
@@ -172,17 +188,35 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
     <div className="space-y-6">
       {/* Time in kitchen, Cooking Progress & Season Banner */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Cooking Time Box */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FDF6EE] text-[#D97706] flex items-center justify-center border border-[#F4DECA] shrink-0">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs text-[#7D7569] font-medium block">Temps de cuisine estimé :</span>
-            <div className="text-base sm:text-lg font-bold text-[#433E37] font-mono-code">
-              {totalMinutes > 0 ? `${hours > 0 ? `${hours}h ` : ''}${mins} min` : '—'}
+        {/* Cooking Time Box & Active Meals */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E1D7] shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FDF6EE] text-[#D97706] flex items-center justify-center border border-[#F4DECA] shrink-0">
+              <Clock className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-[#A39E93]">sur la semaine</span>
+            <div>
+              <span className="text-xs text-[#7D7569] font-medium block">Temps de cuisine estimé :</span>
+              <div className="text-base sm:text-lg font-bold text-[#433E37] font-mono-code">
+                {totalMinutes > 0 ? `${hours > 0 ? `${hours}h ` : ''}${mins} min` : '—'}
+              </div>
+              <span className="text-[10px] text-[#A39E93]">sur la semaine</span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-[#7D7569] block">Repas prévus :</span>
+            <span className="font-mono-code font-bold text-xs text-[#3D593A] bg-[#EBF2EA] px-2 py-0.5 rounded-md border border-[#D1E0CE]">
+              {plannedSlotsCount} / 14 repas
+            </span>
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="text-[9px] text-[#D97706] hover:underline font-semibold block mt-1 cursor-pointer"
+              >
+                Gérer mes repas habituels
+              </button>
+            )}
           </div>
         </div>
 
@@ -263,265 +297,375 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
 
       {/* 7 Days Grid */}
       <div className="space-y-4">
-        {plan.map((dayPlan, dayIdx) => (
-          <div
-            key={dayPlan.day}
-            className="bg-white rounded-2xl border border-[#E6E1D7] shadow-xs overflow-hidden transition-shadow hover:shadow-md"
-          >
-            {/* Day Header */}
-            <div className="bg-[#433E37] text-white px-5 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono-code font-bold text-[#8BA888] px-1.5 py-0.5 rounded bg-[#322E28]">
-                  {String(dayIdx + 1).padStart(2, '0')}
-                </span>
-                <h3 className="font-bold text-base tracking-wide">
-                  {dayPlan.day}
-                </h3>
+        {plan.map((dayPlan, dayIdx) => {
+          const midiActive = mealSchedule[dayPlan.day]?.midi ?? true;
+          const soirActive = mealSchedule[dayPlan.day]?.soir ?? true;
+
+          return (
+            <div
+              key={dayPlan.day}
+              className="bg-white rounded-2xl border border-[#E6E1D7] shadow-xs overflow-hidden transition-shadow hover:shadow-md"
+            >
+              {/* Day Header */}
+              <div className="bg-[#433E37] text-white px-4 sm:px-5 py-3 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono-code font-bold text-[#8BA888] px-1.5 py-0.5 rounded bg-[#322E28]">
+                    {String(dayIdx + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="font-bold text-base tracking-wide">
+                    {dayPlan.day}
+                  </h3>
+
+                  {dayPlan.weekend && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#C87428] text-white">
+                      Week-end
+                    </span>
+                  )}
+                </div>
+
+                {/* Day Meal Schedule Quick Switches */}
+                {onToggleMealScheduleSlot && (
+                  <div className="flex items-center gap-1.5 bg-[#322E28] px-2 py-1 rounded-xl border border-[#4E473F]">
+                    <span className="text-[10px] text-[#A39E93] mr-1 hidden sm:inline">Repas du jour :</span>
+
+                    {/* Quick Midi Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => onToggleMealScheduleSlot(dayPlan.day, 'midi')}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                        midiActive
+                          ? 'bg-[#8BA888] text-white border-[#799976]'
+                          : 'bg-[#433E37] text-[#A39E93] border-dashed border-[#5A534A] line-through'
+                      }`}
+                      title={midiActive ? `Ne pas manger le midi le ${dayPlan.day}` : `Activer le repas du midi le ${dayPlan.day}`}
+                    >
+                      <Sun className={`w-3 h-3 ${midiActive ? 'text-[#FDF6EE]' : 'text-[#7D7569]'}`} />
+                      <span>Midi</span>
+                    </button>
+
+                    {/* Quick Soir Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => onToggleMealScheduleSlot(dayPlan.day, 'soir')}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                        soirActive
+                          ? 'bg-[#D97706] text-white border-[#B45309]'
+                          : 'bg-[#433E37] text-[#A39E93] border-dashed border-[#5A534A] line-through'
+                      }`}
+                      title={soirActive ? `Ne pas manger le soir le ${dayPlan.day}` : `Activer le repas du soir le ${dayPlan.day}`}
+                    >
+                      <Moon className={`w-3 h-3 ${soirActive ? 'text-[#FDF6EE]' : 'text-[#7D7569]'}`} />
+                      <span>Soir</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {dayPlan.weekend && (
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#C87428] text-white">
-                  Week-end
-                </span>
-              )}
-            </div>
+              {/* Meals in Day (Midi & Soir) */}
+              <div className="divide-y divide-[#F4F1EB]">
+                {(['midi', 'soir'] as MealType[]).map(type => {
+                  const isSlotActive = mealSchedule[dayPlan.day]?.[type] ?? true;
+                  const rid = dayPlan[type];
+                  const recipe = findRecipeById(type, rid, customRecipes);
+                  const isDone = !!completedMeals[`${dayIdx}-${type}`];
+                  const isSwapTarget = swapSource?.dayIdx === dayIdx && swapSource?.type === type;
+                  const isFav = recipe ? favoriteRecipeIds.includes(recipe.id) : false;
 
-            {/* Meals in Day (Midi & Soir) */}
-            <div className="divide-y divide-[#F4F1EB]">
-              {(['midi', 'soir'] as MealType[]).map(type => {
-                const rid = dayPlan[type];
-                const recipe = findRecipeById(type, rid, customRecipes);
-                const isDone = !!completedMeals[`${dayIdx}-${type}`];
-                const isSwapTarget = swapSource?.dayIdx === dayIdx && swapSource?.type === type;
-                const isFav = recipe ? favoriteRecipeIds.includes(recipe.id) : false;
+                  // 1. SLOT IS DISABLED / SKIPPED
+                  if (!isSlotActive) {
+                    return (
+                      <div
+                        key={type}
+                        className="p-3.5 px-4 sm:px-5 flex items-center justify-between bg-[#F8F6F0] border-l-3 border-[#DCD6CB]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-[#EAE5DC] text-[#7D7569] border-[#DCD6CB] line-through">
+                            {type === 'midi' ? 'Midi' : 'Soir'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#A39E93] italic font-medium">
+                              Repas non consommé / à l'extérieur
+                            </span>
+                          </div>
+                        </div>
 
-                if (!recipe || !rid) {
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onToggleMealScheduleSlot) {
+                                onToggleMealScheduleSlot(dayPlan.day, type);
+                              }
+                              handleAddSlot(dayIdx, type);
+                            }}
+                            className="px-2.5 py-1 text-xs font-bold text-[#3D593A] bg-[#EBF2EA] hover:bg-[#D1E0CE] border border-[#D1E0CE] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Activer ce repas pour cette semaine"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Manger ce repas</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // 2. SLOT IS ACTIVE BUT EMPTY
+                  if (!recipe || !rid) {
+                    return (
+                      <div key={type} className="p-3.5 px-4 sm:px-5 flex items-center justify-between bg-[#F9F7F2]">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                            type === 'midi' ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]' : 'bg-[#F4F1EB] text-[#433E37] border-[#E6E1D7]'
+                          }`}>
+                            {type === 'midi' ? 'Midi' : 'Soir'}
+                          </span>
+                          <span className="text-xs text-[#A39E93] italic">Aucun plat sélectionné</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Search and Pick Specific Dish */}
+                          <button
+                            onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
+                            className="px-3 py-1.5 text-xs font-bold text-[#433E37] bg-white hover:bg-[#F4F1EB] rounded-lg flex items-center gap-1.5 border border-[#DCD6CB] cursor-pointer shadow-2xs transition-colors"
+                          >
+                            <Search className="w-3.5 h-3.5 text-[#8BA888]" />
+                            <span>Choisir un plat</span>
+                          </button>
+
+                          {/* Quick Random Add */}
+                          <button
+                            onClick={() => handleAddSlot(dayIdx, type)}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-[#7D7569] hover:text-[#433E37] bg-[#EAE5DC] hover:bg-[#DCD6CB] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Ajouter un plat au hasard"
+                          >
+                            <Dices className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Aléatoire</span>
+                          </button>
+
+                          {/* Quick Skip / Uncheck this slot */}
+                          {onToggleMealScheduleSlot && (
+                            <button
+                              type="button"
+                              onClick={() => onToggleMealScheduleSlot(dayPlan.day, type)}
+                              className="p-1.5 text-[#A39E93] hover:text-[#B84A39] hover:bg-[#FDF2F0] rounded-lg transition-colors cursor-pointer"
+                              title="Je ne mange pas à domicile pour ce repas"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // 3. SLOT IS ACTIVE AND HAS A RECIPE
+                  const nutrition = calculateDishNutrition(recipe);
+                  const cost = calculateDishEstimatedCost(recipe, storeProfileId);
+                  const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
+
                   return (
-                    <div key={type} className="p-3.5 px-4 sm:px-5 flex items-center justify-between bg-[#F9F7F2]">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                    <div
+                      key={type}
+                      className={`p-3.5 px-4 sm:px-5 flex flex-wrap items-center justify-between gap-3 transition-colors ${
+                        isDone
+                          ? 'bg-[#F9F7F2]/80 text-[#A39E93]'
+                          : isSwapTarget
+                          ? 'bg-[#FDF6EE] ring-2 ring-[#D97706] ring-inset'
+                          : 'hover:bg-[#F9F7F2]'
+                      }`}
+                    >
+                      {/* Left: Tag + Heart + Name + Prep time */}
+                      <div className="flex items-center gap-3 flex-1 min-w-[240px]">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 ${
                           type === 'midi' ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]' : 'bg-[#F4F1EB] text-[#433E37] border-[#E6E1D7]'
                         }`}>
                           {type === 'midi' ? 'Midi' : 'Soir'}
                         </span>
-                        <span className="text-xs text-[#A39E93] italic">Aucun repas planifié</span>
+
+                        {/* Favorite Heart Button */}
+                        <button
+                          type="button"
+                          onClick={() => onToggleFavorite(recipe.id)}
+                          className="p-1 text-[#A39E93] hover:text-[#B84A39] transition-colors rounded-md cursor-pointer shrink-0"
+                          title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        >
+                          <Heart
+                            className={`w-4 h-4 transition-transform active:scale-125 ${
+                              isFav ? 'text-[#B84A39] fill-[#B84A39]' : 'hover:fill-[#B84A39]/20'
+                            }`}
+                          />
+                        </button>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              onClick={() => onInspectDish(recipe)}
+                              className={`font-semibold text-xs sm:text-sm hover:text-[#8BA888] cursor-pointer transition-colors ${
+                                isDone ? 'line-through text-[#A39E93]' : 'text-[#433E37]'
+                              }`}
+                            >
+                              {recipe.name}
+                            </span>
+
+                            {/* Seasonal Badge */}
+                            {seasonAnalysis.hasSeasonalProduce && (
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 ${
+                                  seasonAnalysis.isAllInSeason
+                                    ? 'bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]'
+                                    : 'bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]'
+                                }`}
+                                title={
+                                  seasonAnalysis.isAllInSeason
+                                    ? 'Tous les fruits et légumes de ce plat sont de saison'
+                                    : seasonAnalysis.outOfSeasonProduce
+                                        .map(p => `${p.name} (saison : ${p.bestMonths})`)
+                                        .join(', ')
+                                }
+                              >
+                                {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                              </span>
+                            )}
+
+                            {recipe.isFallback && (
+                              <span className="text-[10px] text-[#D97706] font-bold bg-[#FDF6EE] px-1.5 py-0.2 rounded border border-[#F4DECA]">
+                                Dépannage
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-[11px] text-[#7D7569] mt-0.5 font-mono-code">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-[#A39E93]" />
+                              {recipe.time}
+                            </span>
+                            <span>·</span>
+                            <span className="text-[#3D593A] font-bold">
+                              {cost.toFixed(2)} €
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {/* Search and Pick Specific Dish */}
-                        <button
-                          onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
-                          className="px-3 py-1.5 text-xs font-bold text-[#433E37] bg-white hover:bg-[#F4F1EB] rounded-lg flex items-center gap-1.5 border border-[#DCD6CB] cursor-pointer shadow-2xs transition-colors"
+                      {/* Middle: Nutrition Micro Badges */}
+                      <div className="hidden md:flex items-center gap-2 shrink-0">
+                        <span
+                          onClick={() => onInspectDish(recipe)}
+                          className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded cursor-pointer ${getNutriScoreColor(nutrition.nutriScore)}`}
+                          title={`Nutri-Score ${nutrition.nutriScore}`}
                         >
-                          <Search className="w-3.5 h-3.5 text-[#8BA888]" />
-                          <span>Choisir un plat</span>
+                          {nutrition.nutriScore}
+                        </span>
+
+                        <div className="text-[10px] text-[#7D7569] font-mono-code flex gap-1.5 bg-[#F4F1EB] px-2 py-1 rounded-lg border border-[#E6E1D7]">
+                          <span className="text-[#D97706] font-semibold">{nutrition.calories} kcal</span>
+                          <span>·</span>
+                          <span className="text-[#433E37] font-semibold">{nutrition.proteins}g prot</span>
+                          <span>·</span>
+                          <span className="text-[#3D593A] font-semibold">{nutrition.fiber}g fibres</span>
+                        </div>
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Mark Done Toggle */}
+                        <button
+                          onClick={() => handleToggleDoneWithConfetti(dayIdx, type)}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            isDone
+                              ? 'bg-[#EAE5DC] text-[#7D7569] hover:bg-[#DCD6CB]'
+                              : 'bg-[#8BA888] hover:bg-[#799976] text-white shadow-2xs'
+                          }`}
+                          title="Marquer comme cuisiné (déduit les ingrédients de votre frigo)"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{isDone ? 'Cuisiné' : 'Cuisiner'}</span>
                         </button>
 
-                        {/* Quick Random Add */}
-                        <button
-                          onClick={() => handleAddSlot(dayIdx, type)}
-                          className="px-2.5 py-1.5 text-xs font-semibold text-[#7D7569] hover:text-[#433E37] bg-[#EAE5DC] hover:bg-[#DCD6CB] rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                          title="Ajouter un plat au hasard"
-                        >
-                          <Dices className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Aléatoire</span>
-                        </button>
+                        {!isDone && (
+                          <>
+                            {/* Search / Pick Specific Recipe */}
+                            <button
+                              onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
+                              className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
+                              title="Rechercher et choisir un autre plat précis pour ce créneau"
+                            >
+                              <Search className="w-4 h-4 text-[#8BA888]" />
+                            </button>
+
+                            {/* Cooking mode with timers */}
+                            <button
+                              onClick={() => onCookDish(recipe, dayIdx, type)}
+                              className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
+                              title="Mode cuisson pas-à-pas avec minuteurs"
+                            >
+                              <UtensilsCrossed className="w-4 h-4" />
+                            </button>
+
+                            {/* Inspect Dish */}
+                            <button
+                              onClick={() => onInspectDish(recipe)}
+                              className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
+                              title="Fiche nutritionnelle détaillée"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+
+                            {/* Swap meal */}
+                            <button
+                              onClick={() => handleSwapClick(dayIdx, type)}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                isSwapTarget
+                                  ? 'bg-[#D97706] text-white font-bold'
+                                  : 'text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7]'
+                              }`}
+                              title="Intervertir avec un autre jour"
+                            >
+                              <ArrowLeftRight className="w-4 h-4" />
+                            </button>
+
+                            {/* Reroll single meal */}
+                            <button
+                              onClick={() => handleReroll(dayIdx, type)}
+                              className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
+                              title="Changer de plat aléatoirement"
+                            >
+                              <Dices className="w-4 h-4" />
+                            </button>
+
+                            {/* Skip this meal / Set as not eaten at home */}
+                            {onToggleMealScheduleSlot && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onSetMeal(dayIdx, type, null);
+                                  onToggleMealScheduleSlot(dayPlan.day, type);
+                                }}
+                                className="p-1.5 text-[#7D7569] hover:text-[#B84A39] hover:bg-[#FDF2F0] rounded-lg transition-colors cursor-pointer"
+                                title="Je ne mange pas à la maison ce repas (désactiver le créneau)"
+                              >
+                                <Ban className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => onSetMeal(dayIdx, type, null)}
+                              className="p-1.5 text-[#B84A39] hover:text-[#8C3426] hover:bg-[#FDF2F0] rounded-lg transition-colors cursor-pointer"
+                              title="Retirer ce repas"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
-                }
-
-                const nutrition = calculateDishNutrition(recipe);
-                const cost = calculateDishEstimatedCost(recipe, storeProfileId);
-                const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
-
-                return (
-                  <div
-                    key={type}
-                    className={`p-3.5 px-4 sm:px-5 flex flex-wrap items-center justify-between gap-3 transition-colors ${
-                      isDone
-                        ? 'bg-[#F9F7F2]/80 text-[#A39E93]'
-                        : isSwapTarget
-                        ? 'bg-[#FDF6EE] ring-2 ring-[#D97706] ring-inset'
-                        : 'hover:bg-[#F9F7F2]'
-                    }`}
-                  >
-                    {/* Left: Tag + Heart + Name + Prep time */}
-                    <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 ${
-                        type === 'midi' ? 'bg-[#EBF2EA] text-[#3D593A] border-[#D1E0CE]' : 'bg-[#F4F1EB] text-[#433E37] border-[#E6E1D7]'
-                      }`}>
-                        {type === 'midi' ? 'Midi' : 'Soir'}
-                      </span>
-
-                      {/* Favorite Heart Button */}
-                      <button
-                        type="button"
-                        onClick={() => onToggleFavorite(recipe.id)}
-                        className="p-1 text-[#A39E93] hover:text-[#B84A39] transition-colors rounded-md cursor-pointer shrink-0"
-                        title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                      >
-                        <Heart
-                          className={`w-4 h-4 transition-transform active:scale-125 ${
-                            isFav ? 'text-[#B84A39] fill-[#B84A39]' : 'hover:fill-[#B84A39]/20'
-                          }`}
-                        />
-                      </button>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            onClick={() => onInspectDish(recipe)}
-                            className={`font-semibold text-xs sm:text-sm hover:text-[#8BA888] cursor-pointer transition-colors ${
-                              isDone ? 'line-through text-[#A39E93]' : 'text-[#433E37]'
-                            }`}
-                          >
-                            {recipe.name}
-                          </span>
-
-                          {/* Seasonal Badge */}
-                          {seasonAnalysis.hasSeasonalProduce && (
-                            <span
-                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 ${
-                                seasonAnalysis.isAllInSeason
-                                  ? 'bg-[#EBF2EA] text-[#3D593A] border border-[#D1E0CE]'
-                                  : 'bg-[#FDF6EE] text-[#D97706] border border-[#F4DECA]'
-                              }`}
-                              title={
-                                seasonAnalysis.isAllInSeason
-                                  ? 'Tous les fruits et légumes de ce plat sont de saison'
-                                  : seasonAnalysis.outOfSeasonProduce
-                                      .map(p => `${p.name} (saison : ${p.bestMonths})`)
-                                      .join(', ')
-                              }
-                            >
-                              {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
-                            </span>
-                          )}
-
-                          {recipe.isFallback && (
-                            <span className="text-[10px] text-[#D97706] font-bold bg-[#FDF6EE] px-1.5 py-0.2 rounded border border-[#F4DECA]">
-                              Dépannage
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 text-[11px] text-[#7D7569] mt-0.5 font-mono-code">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-[#A39E93]" />
-                            {recipe.time}
-                          </span>
-                          <span>·</span>
-                          <span className="text-[#3D593A] font-bold">
-                            {cost.toFixed(2)} €
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Middle: Nutrition Micro Badges */}
-                    <div className="hidden md:flex items-center gap-2 shrink-0">
-                      <span
-                        onClick={() => onInspectDish(recipe)}
-                        className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded cursor-pointer ${getNutriScoreColor(nutrition.nutriScore)}`}
-                        title={`Nutri-Score ${nutrition.nutriScore}`}
-                      >
-                        {nutrition.nutriScore}
-                      </span>
-
-                      <div className="text-[10px] text-[#7D7569] font-mono-code flex gap-1.5 bg-[#F4F1EB] px-2 py-1 rounded-lg border border-[#E6E1D7]">
-                        <span className="text-[#D97706] font-semibold">{nutrition.calories} kcal</span>
-                        <span>·</span>
-                        <span className="text-[#433E37] font-semibold">{nutrition.proteins}g prot</span>
-                        <span>·</span>
-                        <span className="text-[#3D593A] font-semibold">{nutrition.fiber}g fibres</span>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Mark Done Toggle */}
-                      <button
-                        onClick={() => handleToggleDoneWithConfetti(dayIdx, type)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
-                          isDone
-                            ? 'bg-[#EAE5DC] text-[#7D7569] hover:bg-[#DCD6CB]'
-                            : 'bg-[#8BA888] hover:bg-[#799976] text-white shadow-2xs'
-                        }`}
-                        title="Marquer comme cuisiné (déduit les ingrédients de votre frigo)"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>{isDone ? 'Cuisiné' : 'Cuisiner'}</span>
-                      </button>
-
-                      {!isDone && (
-                        <>
-                          {/* Search / Pick Specific Recipe */}
-                          <button
-                            onClick={() => handleOpenPicker(dayIdx, dayPlan.day, type)}
-                            className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
-                            title="Rechercher et choisir un autre plat précis pour ce créneau"
-                          >
-                            <Search className="w-4 h-4 text-[#8BA888]" />
-                          </button>
-
-                          {/* Cooking mode with timers */}
-                          <button
-                            onClick={() => onCookDish(recipe, dayIdx, type)}
-                            className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
-                            title="Mode cuisson pas-à-pas avec minuteurs"
-                          >
-                            <UtensilsCrossed className="w-4 h-4" />
-                          </button>
-
-                          {/* Inspect Dish */}
-                          <button
-                            onClick={() => onInspectDish(recipe)}
-                            className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
-                            title="Fiche nutritionnelle détaillée"
-                          >
-                            <Info className="w-4 h-4" />
-                          </button>
-
-                          {/* Swap meal */}
-                          <button
-                            onClick={() => handleSwapClick(dayIdx, type)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              isSwapTarget
-                                ? 'bg-[#D97706] text-white font-bold'
-                                : 'text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7]'
-                            }`}
-                            title="Intervertir avec un autre jour"
-                          >
-                            <ArrowLeftRight className="w-4 h-4" />
-                          </button>
-
-                          {/* Reroll single meal */}
-                          <button
-                            onClick={() => handleReroll(dayIdx, type)}
-                            className="p-1.5 text-[#433E37] hover:text-[#2E2A25] bg-[#F4F1EB] hover:bg-[#EAE5DC] border border-[#E6E1D7] rounded-lg transition-colors cursor-pointer"
-                            title="Changer de plat aléatoirement"
-                          >
-                            <Dices className="w-4 h-4" />
-                          </button>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => onSetMeal(dayIdx, type, null)}
-                            className="p-1.5 text-[#B84A39] hover:text-[#8C3426] hover:bg-[#FDF2F0] rounded-lg transition-colors cursor-pointer"
-                            title="Retirer ce repas"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Dish Picker Modal */}

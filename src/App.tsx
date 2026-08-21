@@ -15,7 +15,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShoppingList } from './components/ShoppingList';
 import { WeeklyPlanning } from './components/WeeklyPlanning';
 import { BASE_RECIPES } from './data/recipes';
-import { DayMealPlan, MealType, Recipe, StudentProfile } from './types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealType, Recipe, StudentProfile } from './types';
 import { computeMonthlyBudgetStats, computeReceipt } from './utils/budget';
 import { calculateWeeklyNutrition, findRecipeById, getAllRecipes } from './utils/nutrition';
 import { generateEcoPlan, generateWeekPlan } from './utils/planner';
@@ -484,6 +484,37 @@ export default function App() {
     setProfile(updatedProfile);
   };
 
+  // Toggle single meal slot in meal schedule directly from planning
+  const handleToggleMealScheduleSlot = (dayName: string, type: 'midi' | 'soir') => {
+    if (!profile) return;
+    const currentSchedule = profile.mealSchedule || DEFAULT_MEAL_SCHEDULE;
+    const currentVal = currentSchedule[dayName]?.[type] ?? true;
+    const newVal = !currentVal;
+
+    const updatedSchedule = {
+      ...currentSchedule,
+      [dayName]: {
+        ...(currentSchedule[dayName] || { midi: true, soir: true }),
+        [type]: newVal
+      }
+    };
+
+    const updatedProfile: StudentProfile = {
+      ...profile,
+      mealSchedule: updatedSchedule
+    };
+
+    setProfile(updatedProfile);
+
+    // If disabling slot, remove recipe from weekPlan for that day and slot
+    if (!newVal) {
+      const dayIdx = weekPlan.findIndex(d => d.day === dayName);
+      if (dayIdx !== -1) {
+        handleSetMeal(dayIdx, type, null);
+      }
+    }
+  };
+
   // Insert recipe from Anti-Gaspi into the first available slot or current day
   const handleSelectAntiGaspiRecipe = (recipe: Recipe, type: MealType) => {
     let targetDay = 0;
@@ -509,6 +540,14 @@ export default function App() {
       .filter((r): r is Recipe => Boolean(r));
   }, [extraShoppingRecipeIds, allRecipes]);
 
+  // Calculate total scheduled meals count
+  const activeMealsCount = useMemo(() => {
+    if (!profile?.mealSchedule) return 14;
+    return Object.values(profile.mealSchedule).reduce((acc: number, day: { midi?: boolean; soir?: boolean }) => {
+      return acc + (day.midi ? 1 : 0) + (day.soir ? 1 : 0);
+    }, 0);
+  }, [profile?.mealSchedule]);
+
   // Calculate live dynamic metrics including extra shopping recipes
   const receiptStats = computeReceipt(
     weekPlan,
@@ -525,7 +564,8 @@ export default function App() {
     receiptStats.grandTotal,
     receiptStats.bulkSavings,
     storeProfileId,
-    actualPaidAmount
+    actualPaidAmount,
+    activeMealsCount
   );
 
   // If no profile, show onboarding
@@ -575,6 +615,8 @@ export default function App() {
             onSwapMeals={handleSwapMeals}
             onInspectDish={(recipe) => setInspectedRecipe(recipe)}
             onCookDish={(recipe, dayIdx, type) => setCookingRecipe({ recipe, dayIdx, type })}
+            onToggleMealScheduleSlot={handleToggleMealScheduleSlot}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         )}
 

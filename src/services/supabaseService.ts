@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../utils/supabaseClient';
-import { DayMealPlan, MealType, Recipe, StudentProfile } from '../types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealType, Recipe, StudentProfile } from '../types';
 
 export interface CloudUserData {
   profile: StudentProfile | null;
@@ -50,7 +50,8 @@ export async function loadCloudData(userId: string): Promise<CloudUserData | nul
         micro: Boolean(profileRow.micro),
         shoppingDay: profileRow.shopping_day || 'Lundi',
         monthlyBudget: Number(profileRow.monthly_budget) || 140,
-        dietPreference: profileRow.diet_preference || 'all'
+        dietPreference: profileRow.diet_preference || 'all',
+        mealSchedule: profileRow.meal_schedule || DEFAULT_MEAL_SCHEDULE
       };
     }
 
@@ -134,6 +135,7 @@ export async function syncCloudProfile(userId: string, profile: StudentProfile) 
       shopping_day: profile.shoppingDay,
       monthly_budget: profile.monthlyBudget,
       diet_preference: profile.dietPreference || 'all',
+      meal_schedule: profile.mealSchedule || DEFAULT_MEAL_SCHEDULE,
       updated_at: new Date().toISOString()
     });
   } catch (err) {

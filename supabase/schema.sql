@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   shopping_day TEXT NOT NULL DEFAULT 'Lundi',
   monthly_budget NUMERIC NOT NULL DEFAULT 140,
   diet_preference TEXT NOT NULL DEFAULT 'all',
+  meal_schedule JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

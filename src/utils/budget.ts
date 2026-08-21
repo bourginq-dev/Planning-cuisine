@@ -165,19 +165,31 @@ export function calculateDishEstimatedCost(recipe: Recipe, storeProfileId: strin
   return Math.round(total * 100) / 100;
 }
 
+export function isPremiumRecipe(recipe: Recipe, storeProfileId: string = 'standard'): boolean {
+  if (recipe.isPremium) return true;
+  if (recipe.tags?.some(t => {
+    const l = t.toLowerCase();
+    return l.includes('plaisir') || l.includes('gourmet') || l.includes('plus cher') || l.includes('premium');
+  })) return true;
+  const cost = calculateDishEstimatedCost(recipe, storeProfileId);
+  return cost >= 2.45;
+}
+
 export function computeMonthlyBudgetStats(
   targetBudget: number,
   weeklyCost: number,
   bulkSavingsWeekly: number,
   storeProfileId: string,
-  actualPaidAmount?: number | null
+  actualPaidAmount?: number | null,
+  activeMealsCount: number = 14
 ): MonthlyBudgetStats {
   const target = targetBudget > 0 ? targetBudget : 150;
   // 1 mois = 4.33 semaines en moyenne
   const projectedMonthlyCost = Math.round(weeklyCost * 4.33 * 100) / 100;
   const costPerDay = Math.round((weeklyCost / 7) * 100) / 100;
-  // 14 repas principaux par semaine (7 déjeuners + 7 dîners)
-  const costPerMeal = Math.round((weeklyCost / 14) * 100) / 100;
+  // Calcul basé sur le nombre de repas consommés dans la semaine
+  const count = activeMealsCount > 0 ? activeMealsCount : 14;
+  const costPerMeal = Math.round((weeklyCost / count) * 100) / 100;
 
   const hasActual = typeof actualPaidAmount === 'number' && actualPaidAmount > 0;
   const projectedActualMonthlyCost = hasActual ? Math.round(actualPaidAmount * 4.33 * 100) / 100 : null;

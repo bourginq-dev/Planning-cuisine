@@ -878,6 +878,88 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     cat: 'Fruits & Légumes',
     referenceGrams: 120,
     nutritionPer100: { calories: 89, proteins: 1.1, carbs: 22.8, fats: 0.3, fiber: 2.6 }
+  },
+  saumon: {
+    id: 'saumon',
+    name: 'Pavé de saumon (frais ou surgelé)',
+    unit: 'g',
+    pack: 125,
+    price: 2.90,
+    cat: 'Frais',
+    nutritionPer100: { calories: 208, proteins: 20.0, carbs: 0.0, fats: 13.5, fiber: 0 }
+  },
+  saumon_fume: {
+    id: 'saumon_fume',
+    name: 'Saumon fumé en tranches',
+    unit: 'g',
+    pack: 100,
+    price: 3.10,
+    cat: 'Frais',
+    nutritionPer100: { calories: 185, proteins: 22.0, carbs: 0.5, fats: 10.5, fiber: 0 }
+  },
+  crevettes: {
+    id: 'crevettes',
+    name: 'Crevettes décortiquées cuites',
+    unit: 'g',
+    pack: 150,
+    price: 3.20,
+    cat: 'Frais',
+    nutritionPer100: { calories: 95, proteins: 20.5, carbs: 0.8, fats: 1.0, fiber: 0 }
+  },
+  steak_hache: {
+    id: 'steak_hache',
+    name: 'Steak haché pur bœuf 15% MG',
+    unit: 'pièce',
+    pack: 2,
+    price: 3.20,
+    cat: 'Frais',
+    referenceGrams: 100,
+    nutritionPer100: { calories: 215, proteins: 20.0, carbs: 0.0, fats: 15.0, fiber: 0 }
+  },
+  gesiers: {
+    id: 'gesiers',
+    name: 'Gésiers de canard confits émincés',
+    unit: 'g',
+    pack: 200,
+    price: 2.60,
+    cat: 'Frais',
+    nutritionPer100: { calories: 150, proteins: 24.0, carbs: 0.5, fats: 6.0, fiber: 0 }
+  },
+  amandes: {
+    id: 'amandes',
+    name: 'Amandes effilées ou concassées',
+    unit: 'g',
+    pack: 125,
+    price: 2.10,
+    cat: 'Épicerie',
+    nutritionPer100: { calories: 579, proteins: 21.0, carbs: 21.5, fats: 49.9, fiber: 12.5 }
+  },
+  paprika: {
+    id: 'paprika',
+    name: 'Paprika doux en poudre',
+    unit: 'g',
+    pack: 40,
+    price: 1.00,
+    cat: 'Épicerie',
+    nutritionPer100: { calories: 282, proteins: 14.1, carbs: 53.9, fats: 12.8, fiber: 34.0 }
+  },
+  herbes_provence: {
+    id: 'herbes_provence',
+    name: 'Herbes de Provence',
+    unit: 'g',
+    pack: 30,
+    price: 1.10,
+    cat: 'Épicerie',
+    nutritionPer100: { calories: 260, proteins: 8.0, carbs: 40.0, fats: 7.0, fiber: 25.0 }
+  },
+  sauce_barbecue: {
+    id: 'sauce_barbecue',
+    name: 'Sauce Barbecue BBQ',
+    unit: 'g',
+    pack: 250,
+    price: 1.30,
+    cat: 'Épicerie',
+    nutritionPer100: { calories: 140, proteins: 1.0, carbs: 32.0, fats: 0.5, fiber: 1.2 }
   }
 };
 

@@ -37,6 +37,7 @@ export interface Recipe {
   tags?: string[];
   isFallback?: boolean;
   isCustom?: boolean;
+  isPremium?: boolean;
   customNutrition?: Partial<NutritionalValues>;
   servings?: number;
 }
@@ -48,6 +49,18 @@ export interface DayMealPlan {
   soir: string | null;
 }
 
+export type MealSchedule = Record<string, { midi: boolean; soir: boolean }>;
+
+export const DEFAULT_MEAL_SCHEDULE: MealSchedule = {
+  'Lundi': { midi: true, soir: true },
+  'Mardi': { midi: true, soir: true },
+  'Mercredi': { midi: true, soir: true },
+  'Jeudi': { midi: true, soir: true },
+  'Vendredi': { midi: true, soir: true },
+  'Samedi': { midi: true, soir: true },
+  'Dimanche': { midi: true, soir: true }
+};
+
 export interface StudentProfile {
   name: string;
   plaques: number;
@@ -58,6 +71,7 @@ export interface StudentProfile {
   shoppingDay: string;
   monthlyBudget: number;
   dietPreference?: 'all' | 'veggie' | 'high-protein' | 'fast';
+  mealSchedule?: MealSchedule;
 }
 
 export interface StoreProfile {

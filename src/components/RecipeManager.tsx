@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { INGREDIENTS } from '../data/ingredients';
 import { DayMealPlan, MealType, NutriScoreGrade, Recipe, StudentProfile } from '../types';
-import { calculateDishEstimatedCost } from '../utils/budget';
+import { calculateDishEstimatedCost, isPremiumRecipe } from '../utils/budget';
 import { calculateDishNutrition, getAllRecipes } from '../utils/nutrition';
 import {
   analyzeRecipeSeasonality,
@@ -85,7 +85,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMealType, setSelectedMealType] = useState<MealType | 'all'>('all');
-  const [selectedOrigin, setSelectedOrigin] = useState<'all' | 'custom' | 'base' | 'favorites'>('all');
+  const [selectedOrigin, setSelectedOrigin] = useState<'all' | 'custom' | 'base' | 'favorites' | 'premium' | 'eco'>('all');
   const [filterSeasonalOnly, setFilterSeasonalOnly] = useState<boolean>(false);
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedNutriScore, setSelectedNutriScore] = useState<NutriScoreGrade | 'all'>('all');
@@ -120,6 +120,7 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
   const customCount = (customRecipes.midi?.length || 0) + (customRecipes.soir?.length || 0);
   const favoritesCount = allRecipes.filter(r => favoriteRecipeIds.includes(r.id)).length;
   const seasonalCount = allRecipes.filter(r => analyzeRecipeSeasonality(r, selectedSeasonMonth).isAllInSeason).length;
+  const premiumCount = allRecipes.filter(r => isPremiumRecipe(r, storeProfileId)).length;
 
   // Filter and sort recipes
   const filteredRecipes = useMemo(() => {
@@ -131,12 +132,16 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
         return false;
       }
 
-      // 2. Origin / Favorites filter
+      // 2. Origin / Favorites / Budget Tier filter
       if (selectedOrigin === 'favorites') {
         if (!favoriteRecipeIds.includes(recipe.id)) return false;
       } else if (selectedOrigin === 'custom' && !recipe.isCustom) {
         return false;
       } else if (selectedOrigin === 'base' && recipe.isCustom) {
+        return false;
+      } else if (selectedOrigin === 'premium' && !isPremiumRecipe(recipe, storeProfileId)) {
+        return false;
+      } else if (selectedOrigin === 'eco' && isPremiumRecipe(recipe, storeProfileId)) {
         return false;
       }
 
@@ -446,14 +451,16 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
             ))}
           </div>
 
-          {/* Origin / Favorites filter */}
+          {/* Origin / Favorites / Budget Tier filter */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-bold text-[#7D7569] mr-1">Catégorie :</span>
             {[
               { id: 'all', label: `Toutes (${allRecipes.length})` },
               { id: 'favorites', label: `❤️ Favoris (${favoritesCount})` },
+              { id: 'premium', label: `💎 Plus cher (${premiumCount})` },
+              { id: 'eco', label: `💰 Éco (${allRecipes.length - premiumCount})` },
               { id: 'custom', label: `⭐ Mes créations (${customCount})` },
-              { id: 'base', label: '📚 Base étudiante' }
+              { id: 'base', label: '📚 Base' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -462,7 +469,9 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                   selectedOrigin === tab.id
                     ? tab.id === 'favorites'
                       ? 'bg-[#B84A39] text-white shadow-2xs'
-                      : 'bg-[#8BA888] text-white shadow-2xs'
+                      : tab.id === 'premium'
+                        ? 'bg-[#D97706] text-white shadow-2xs'
+                        : 'bg-[#8BA888] text-white shadow-2xs'
                     : 'bg-[#FAF8F5] text-[#7D7569] hover:text-[#433E37] hover:bg-[#F4F1EB] border border-[#E6E1D7]'
                 }`}
               >
@@ -670,6 +679,16 @@ export const RecipeManager: React.FC<RecipeManagerProps> = ({
                         }
                       >
                         {seasonAnalysis.isAllInSeason ? '🌱 De saison' : '⚠️ Hors saison'}
+                      </span>
+                    )}
+
+                    {/* Plus cher / Premium Badge */}
+                    {isPremiumRecipe(recipe, storeProfileId) && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] flex items-center gap-0.5"
+                        title="Recette plaisir / ingrédients plus chers"
+                      >
+                        💎 Plus cher
                       </span>
                     )}
 

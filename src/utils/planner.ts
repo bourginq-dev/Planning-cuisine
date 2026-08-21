@@ -84,24 +84,37 @@ export function generateWeekPlan(
 ): DayMealPlan[] {
   const validSoir = getValidRecipes('soir', profile, customRecipes);
   const validMidi = getValidRecipes('midi', profile, customRecipes);
+  const orderedDays = getOrderedDays(profile.shoppingDay);
+  const mealSchedule = profile.mealSchedule;
 
   const usedSoir = new Set<string>();
   const soirPicks: (string | null)[] = [];
-  for (let i = 0; i < 7; i++) {
-    const pick = pickRandomRecipe(validSoir, usedSoir, 'soir', customRecipes);
-    soirPicks.push(pick ? pick.id : null);
-    if (pick) usedSoir.add(pick.id);
+  for (let i = 0; i < orderedDays.length; i++) {
+    const day = orderedDays[i];
+    const isSoirActive = mealSchedule && mealSchedule[day] ? mealSchedule[day].soir : true;
+    if (isSoirActive) {
+      const pick = pickRandomRecipe(validSoir, usedSoir, 'soir', customRecipes);
+      soirPicks.push(pick ? pick.id : null);
+      if (pick) usedSoir.add(pick.id);
+    } else {
+      soirPicks.push(null);
+    }
   }
 
   const usedMidi = new Set<string>();
   const midiPicks: (string | null)[] = [];
-  for (let i = 0; i < 7; i++) {
-    const pick = pickRandomRecipe(validMidi, usedMidi, 'midi', customRecipes);
-    midiPicks.push(pick ? pick.id : null);
-    if (pick) usedMidi.add(pick.id);
+  for (let i = 0; i < orderedDays.length; i++) {
+    const day = orderedDays[i];
+    const isMidiActive = mealSchedule && mealSchedule[day] ? mealSchedule[day].midi : true;
+    if (isMidiActive) {
+      const pick = pickRandomRecipe(validMidi, usedMidi, 'midi', customRecipes);
+      midiPicks.push(pick ? pick.id : null);
+      if (pick) usedMidi.add(pick.id);
+    } else {
+      midiPicks.push(null);
+    }
   }
 
-  const orderedDays = getOrderedDays(profile.shoppingDay);
   return orderedDays.map((day, i) => ({
     day,
     weekend: day === 'Samedi' || day === 'Dimanche',

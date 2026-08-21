@@ -447,6 +447,288 @@ export const BASE_RECIPES: Record<'midi' | 'soir', Recipe[]> = {
       ]
     },
     {
+      id: 'l25',
+      name: 'Salade Caesar au poulet croustillant, copeaux de parmesan & croûtons',
+      type: 'midi',
+      time: '12 min · poêle',
+      tags: ['Plaisir', 'Protéiné', 'Bistrot'],
+      isPremium: true,
+      steps: [
+        'Émince le filet de poulet et fais-le dorer 7 min à la poêle avec sel, poivre et une pincée d’herbes.',
+        'Fais griller des dés de pain dans la même poêle pour obtenir des croûtons dorés.',
+        'Prépare la sauce en mélangeant le demi-yaourt, la moutarde et un filet d’huile ou jus de citron.',
+        'Dresse la batavia croquante, le poulet tiède, les croûtons et parsème généreusement de parmesan râpé.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'salade', qty: 0.4 },
+        { id: 'parmesan', qty: 20 },
+        { id: 'pain', qty: 0.25 },
+        { id: 'yaourt', qty: 0.5 },
+        { id: 'moutarde', qty: 5 }
+      ]
+    },
+    {
+      id: 'l26',
+      name: 'Taboulé gourmand au poulet doré, menthe & tomates fraîches',
+      type: 'midi',
+      time: '12 min · poêle',
+      tags: ['Semoule & Volaille', 'Fraîcheur', 'Batch cooking'],
+      steps: [
+        'Verse le couscous dans un saladier avec le même volume d’eau bouillante salée, couvre 5 min puis égrène à la fourchette.',
+        'Fais revenir les dés de poulet 6 min à la poêle avec un filet d’huile d’olive.',
+        'Coupe la tomate et le concombre en petits dés.',
+        'Mélange la semoule tiède avec les légumes frais, le poulet et un bon filet de jus de citron.'
+      ],
+      ingredients: [
+        { id: 'couscous', qty: 80 },
+        { id: 'poulet', qty: 100 },
+        { id: 'tomate', qty: 1 },
+        { id: 'concombre', qty: 0.4 },
+        { id: 'citron', qty: 0.5 }
+      ]
+    },
+    {
+      id: 'l27',
+      name: 'Semoule parfumée aux carottes fondantes, pois chiches & épices',
+      type: 'midi',
+      time: '10 min · casserole',
+      tags: ['100% Végétal', 'Semoule', 'Économique'],
+      steps: [
+        'Fais revenir l’oignon et la carotte émincée 4 min dans un filet d’huile avec le curry.',
+        'Ajoute les pois chiches rincés et un petit verre d’eau, laisse mijoter 4 min.',
+        'Verse la semoule fine dans un bol, couvre d’eau bouillante salée 5 min.',
+        'Sers la semoule bien chaude nappée de la poêlée de carottes et pois chiches épicés.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 85 },
+        { id: 'poischiches', qty: 0.5 },
+        { id: 'carotte', qty: 100 },
+        { id: 'oignon', qty: 0.3 },
+        { id: 'curry_poudre', qty: 4 }
+      ]
+    },
+    {
+      id: 'l28',
+      name: 'Wrap saumon fumé d’Atlantique, fromage frais & concombre croquant',
+      type: 'midi',
+      time: '5 min · sans cuisson',
+      tags: ['Plaisir', 'Oméga-3', 'Fraîcheur'],
+      isPremium: true,
+      steps: [
+        'Déplie la tortilla wrap et tartine une fine couche de fromage ou crème légère.',
+        'Dépose les tranches de saumon fumé et arrose d’un filet de jus de citron.',
+        'Ajoute des lamelles de concombre croquant et des feuilles de batavia, puis roule bien serré.'
+      ],
+      ingredients: [
+        { id: 'wrap', qty: 1 },
+        { id: 'saumon_fume', qty: 60 },
+        { id: 'concombre', qty: 0.4 },
+        { id: 'salade', qty: 0.25 },
+        { id: 'citron', qty: 0.3 }
+      ]
+    },
+    {
+      id: 'l29',
+      name: 'Salade tiède de semoule fine, courgettes dorées & feta',
+      type: 'midi',
+      time: '10 min · poêle',
+      tags: ['Semoule', 'Végétarien', 'Méditerranéen'],
+      steps: [
+        'Fais dorer la courgette coupée en fines demi-rondelles à la poêle 6 min avec les herbes de Provence.',
+        'Hydrate la semoule avec de l’eau bouillante salée pendant 5 min et égrène à la fourchette.',
+        'Mélange la semoule avec les courgettes tièdes et émiette la feta par-dessus.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 80 },
+        { id: 'courgette', qty: 1 },
+        { id: 'feta', qty: 45 },
+        { id: 'herbes_provence', qty: 3 }
+      ]
+    },
+    {
+      id: 'l30',
+      name: 'Burger gourmet au steak pur bœuf, cheddar fondant & oignons dorés',
+      type: 'midi',
+      time: '10 min · poêle',
+      tags: ['Plaisir', 'Street-food', 'Protéiné'],
+      isPremium: true,
+      steps: [
+        'Émince l’oignon et fais-le dorer 4 min à la poêle jusqu’à ce qu’il soit bien caramélisé.',
+        'Cuis le steak haché 3 min par face à feu vif et dépose la tranche de cheddar pour la faire fondre.',
+        'Toaste le pain burger brioché 1 min dans la poêle.',
+        'Garnis le burger avec les oignons, le steak fondant au cheddar et une feuille de batavia croquante.'
+      ],
+      ingredients: [
+        { id: 'pain_burger', qty: 1 },
+        { id: 'steak_hache', qty: 1 },
+        { id: 'cheddar', qty: 1 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'salade', qty: 0.2 }
+      ]
+    },
+    {
+      id: 'l31',
+      name: 'Salade landaise aux gésiers confits tièdes, pommes & croûtons',
+      type: 'midi',
+      time: '10 min · poêle',
+      tags: ['Plaisir', 'Terroir', 'Gourmet'],
+      isPremium: true,
+      steps: [
+        'Fais dorer les gésiers de canard confits 5 min à feu vif dans leur propre graisse.',
+        'Ajoute des dés de pain pour les dorer avec les sucs des gésiers.',
+        'Dans une assiette, dresse la salade verte et des fines lamelles de pomme croquante.',
+        'Verse les gésiers et croûtons bien chauds sur la salade et assaisonne d’une vinaigrette à la moutarde.'
+      ],
+      ingredients: [
+        { id: 'gesiers', qty: 100 },
+        { id: 'salade', qty: 0.4 },
+        { id: 'pomme', qty: 0.5 },
+        { id: 'pain', qty: 0.25 },
+        { id: 'moutarde', qty: 8 }
+      ]
+    },
+    {
+      id: 'l32',
+      name: 'Pâtes courtes au poulet émincé crémeux & champignons de Paris',
+      type: 'midi',
+      time: '14 min · casserole + poêle',
+      tags: ['Poulet & Pâtes', 'Onctueux', 'Satiété'],
+      steps: [
+        'Cuis les pâtes al dente dans l’eau bouillante salée.',
+        'Fais revenir l’émincé de poulet et les champignons émincés à la poêle 7 min avec une noisette de beurre.',
+        'Incorpore la crème fraîche, sale, poivre et laisse épaissir 2 min.',
+        'Mélange la sauce onctueuse aux pâtes égouttées.'
+      ],
+      ingredients: [
+        { id: 'pates', qty: 90 },
+        { id: 'poulet', qty: 90 },
+        { id: 'champignon', qty: 80 },
+        { id: 'creme', qty: 30 },
+        { id: 'beurre', qty: 5 }
+      ]
+    },
+    {
+      id: 'l33',
+      name: 'Sandwich baguette au poulet émincé, tomates & salade croquante',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Emportable', 'Poulet', 'Protéiné'],
+      steps: [
+        'Fais revenir les lanières de poulet à la poêle 6 min avec du sel et du poivre.',
+        'Ouvre le tiers de baguette fraîche et nappe d’une pointe de moutarde ou mayonnaise.',
+        'Garnis de rondelles de tomates fraîches, de batavia et du poulet encore tiède.'
+      ],
+      ingredients: [
+        { id: 'pain', qty: 0.4 },
+        { id: 'poulet', qty: 90 },
+        { id: 'salade', qty: 0.25 },
+        { id: 'tomate', qty: 0.5 },
+        { id: 'moutarde', qty: 5 }
+      ]
+    },
+    {
+      id: 'l34',
+      name: 'Avocado toast au saumon fumé & œuf poché',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Plaisir', 'Brunch', 'Haute nutrition'],
+      isPremium: true,
+      steps: [
+        'Fais toaster les tranches de pain de mie jusqu’à ce qu’elles soient croustillantes.',
+        'Écrase la chair d’avocat avec une fourchette, du sel, du poivre et un filet de jus de citron.',
+        'Cuis l’œuf au plat ou poché 3 min pour que le jaune reste bien coulant.',
+        'Étale l’avocat sur le pain, dispose le saumon fumé et dépose l’œuf par-dessus.'
+      ],
+      ingredients: [
+        { id: 'painmie', qty: 2 },
+        { id: 'avocat', qty: 0.5 },
+        { id: 'saumon_fume', qty: 50 },
+        { id: 'oeuf', qty: 1 },
+        { id: 'citron', qty: 0.3 }
+      ]
+    },
+    {
+      id: 'l35',
+      name: 'Salade fraîche de semoule aux crevettes sautées, citron & persil',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Plaisir', 'Semoule & Mer', 'Léger & Frais'],
+      isPremium: true,
+      steps: [
+        'Prépare la semoule avec de l’eau bouillante salée, couvre 5 min et égrène.',
+        'Saisis les crevettes 2 min à la poêle avec un filet d’huile d’olive et le jus de citron.',
+        'Coupe le concombre et la tomate en petits dés.',
+        'Mélange la semoule avec les légumes frais et les crevettes chaudes ou froides.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 80 },
+        { id: 'crevettes', qty: 80 },
+        { id: 'concombre', qty: 0.3 },
+        { id: 'tomate', qty: 0.5 },
+        { id: 'citron', qty: 0.5 }
+      ]
+    },
+    {
+      id: 'l36',
+      name: 'Wrap poulet BBQ fondant au cheddar & oignons dorés',
+      type: 'midi',
+      time: '10 min · poêle',
+      tags: ['Poulet', 'Gourmand', 'Tex-Mex'],
+      steps: [
+        'Fais revenir le poulet et l’oignon émincé 6 min à la poêle à feu vif.',
+        'Ajoute la sauce barbecue et mélange 1 min pour caraméliser la viande.',
+        'Dépose sur le wrap tiédi avec la tranche de cheddar et un peu de salade verte, puis roule.'
+      ],
+      ingredients: [
+        { id: 'wrap', qty: 1 },
+        { id: 'poulet', qty: 95 },
+        { id: 'sauce_barbecue', qty: 30 },
+        { id: 'cheddar', qty: 1 },
+        { id: 'oignon', qty: 0.3 }
+      ]
+    },
+    {
+      id: 'l37',
+      name: 'Bowl de semoule tiède au poulet grillé, carottes râpées & yaourt',
+      type: 'midi',
+      time: '12 min · poêle',
+      tags: ['Poulet & Semoule', 'Healthy', 'Fitness'],
+      steps: [
+        'Hydrate la semoule 5 min à l’eau bouillante avec sel et une pincée d’herbes de Provence.',
+        'Fais dorer l’escalope de poulet émincée 6 min dans la poêle.',
+        'Râpe les carottes fraîches.',
+        'Assemble le bowl avec la semoule, les carottes croquantes, le poulet tiède et une sauce au yaourt.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 80 },
+        { id: 'poulet', qty: 100 },
+        { id: 'carotte', qty: 100 },
+        { id: 'yaourt', qty: 0.5 },
+        { id: 'herbes_provence', qty: 3 }
+      ]
+    },
+    {
+      id: 'l38',
+      name: 'Pita wrap aux falafels dorés, crudités & sauce yaourt citronnée',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['100% Végétarien', 'Street-food', 'Protéines végétales'],
+      steps: [
+        'Fais dorer les falafels surgelés à la poêle 6 min avec un filet d’huile.',
+        'Prépare la sauce avec le demi-yaourt, le jus de citron, sel et poivre.',
+        'Garnis la galette wrap avec la batavia, des dés de tomates, les falafels chauds et la sauce fraîche.'
+      ],
+      ingredients: [
+        { id: 'wrap', qty: 1 },
+        { id: 'falafel', qty: 120 },
+        { id: 'salade', qty: 0.3 },
+        { id: 'tomate', qty: 0.5 },
+        { id: 'yaourt', qty: 0.5 },
+        { id: 'citron', qty: 0.3 }
+      ]
+    },
+    {
       id: 'l99',
       name: 'Sandwich jambon-beurre baguette',
       type: 'midi',
@@ -1017,6 +1299,367 @@ export const BASE_RECIPES: Record<'midi' | 'soir', Recipe[]> = {
         { id: 'oignon', qty: 0.5 },
         { id: 'curry_poudre', qty: 5 },
         { id: 'riz', qty: 50 }
+      ]
+    },
+    {
+      id: 's30',
+      name: 'Couscous express au poulet, carottes & pois chiches fondants',
+      type: 'soir',
+      time: '15 min · casserole + poêle',
+      tags: ['Couscous & Volaille', 'Familial', 'Complet'],
+      steps: [
+        'Émince le poulet et fais-le dorer 6 min dans une poêle avec l’oignon et le curry.',
+        'Ajoute les rondelles de carottes, les pois chiches rincés et 150ml d’eau, couvre et laisse mijoter 8 min.',
+        'Verse le couscous dans un saladier, couvre du même volume d’eau bouillante salée 5 min.',
+        'Égrène le couscous et sers avec le bouillon parfumé, les légumes et le poulet tendre.'
+      ],
+      ingredients: [
+        { id: 'couscous', qty: 90 },
+        { id: 'poulet', qty: 110 },
+        { id: 'carotte', qty: 120 },
+        { id: 'poischiches', qty: 0.5 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'curry_poudre', qty: 5 }
+      ]
+    },
+    {
+      id: 's31',
+      name: 'Pavé de saumon poêlé, riz basmati & sauce citronnée au beurre',
+      type: 'soir',
+      time: '12 min · casserole + poêle',
+      tags: ['Plaisir', 'Oméga-3', 'Gourmet'],
+      isPremium: true,
+      steps: [
+        'Mets le riz à cuire dans l’eau bouillante salée pendant 10 min.',
+        'Fais dorer le pavé de saumon à la poêle 4 min côté peau, puis 3 min sur l’autre face avec une noisette de beurre.',
+        'Déglace la poêle hors du feu avec le jus de citron frais pour obtenir une sauce onctueuse.',
+        'Dresse le saumon nappé de sauce au citron sur le riz bien chaud avec quelques feuilles de salade.'
+      ],
+      ingredients: [
+        { id: 'saumon', qty: 125 },
+        { id: 'riz', qty: 85 },
+        { id: 'citron', qty: 0.5 },
+        { id: 'beurre', qty: 12 },
+        { id: 'salade', qty: 0.25 }
+      ]
+    },
+    {
+      id: 's32',
+      name: 'Poulet au curry doux, lait de coco onctueux & riz blanc',
+      type: 'soir',
+      time: '18 min · casserole',
+      tags: ['Saveurs d’Asie', 'Poulet', 'Onctueux'],
+      steps: [
+        'Fais suer l’oignon émincé dans un filet d’huile 2 min puis ajoute les morceaux de poulet.',
+        'Saupoudre de poudre de curry doux et fais dorer le poulet 5 min.',
+        'Verse le lait de coco, sale, poivre et laisse mijoter à feu doux 10 min jusqu’à épaississement de la sauce.',
+        'Sers bien chaud avec du riz blanc fraîchement cuit.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'laitcoco', qty: 100 },
+        { id: 'riz', qty: 80 },
+        { id: 'curry_poudre', qty: 5 },
+        { id: 'oignon', qty: 0.5 }
+      ]
+    },
+    {
+      id: 's33',
+      name: 'Pâtes aux crevettes sautées à l’ail, beurre & parmesan',
+      type: 'soir',
+      time: '12 min · casserole + poêle',
+      tags: ['Plaisir', 'Saveurs d’Italie', 'Fruits de mer'],
+      isPremium: true,
+      steps: [
+        'Cuis les pâtes al dente dans l’eau bouillante salée.',
+        'Dans la poêle, fais fondre le beurre et dore les gousses d’ail émincées 1 min.',
+        'Ajoute les crevettes décortiquées et fais-les sauter 3 min à feu vif.',
+        'Égoutte les pâtes, jette-les dans la poêle avec les crevettes, mélange 1 min et parsème de parmesan râpé.'
+      ],
+      ingredients: [
+        { id: 'pates', qty: 95 },
+        { id: 'crevettes', qty: 100 },
+        { id: 'ail', qty: 2 },
+        { id: 'beurre', qty: 15 },
+        { id: 'parmesan', qty: 20 }
+      ]
+    },
+    {
+      id: 's34',
+      name: 'Semoule royale express saucisse dorée, poulet & légumes d’orient',
+      type: 'soir',
+      time: '18 min · casserole + poêle',
+      tags: ['Plaisir', 'Semoule', 'Gourmand & Rassasiant'],
+      isPremium: true,
+      steps: [
+        'Fais dorer la saucisse coupée en tronçons et l’émincé de poulet dans la poêle pendant 8 min.',
+        'Ajoute les dés de carottes, les tomates concassées et un demi-verre d’eau, puis laisse mijoter 8 min.',
+        'Prépare la semoule fine dans un saladier avec de l’eau bouillante salée, couvre 5 min et égrène au beurre.',
+        'Sers une généreuse assiette de semoule recouverte de viandes et de sauce tomate mijotée.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 85 },
+        { id: 'poulet', qty: 80 },
+        { id: 'saucisse', qty: 1 },
+        { id: 'carotte', qty: 100 },
+        { id: 'tomboite', qty: 0.4 }
+      ]
+    },
+    {
+      id: 's35',
+      name: 'Steak haché pur bœuf à la poêle & purée maison à la muscade',
+      type: 'soir',
+      time: '15 min · casserole + poêle',
+      tags: ['Plaisir', 'Tradition', 'Protéiné'],
+      isPremium: true,
+      steps: [
+        'Épluche et coupe les pommes de terre en morceaux, cuis-les 12 min dans l’eau bouillante.',
+        'Égoutte les pommes de terre et écrase-les à la fourchette avec le beurre et le lait pour obtenir une purée onctueuse.',
+        'Saisis le steak pur bœuf dans la poêle très chaude 2 min 30 par face selon cuisson désirée.',
+        'Sers le steak juteux accompagné du volcan de purée maison fondante.'
+      ],
+      ingredients: [
+        { id: 'steak_hache', qty: 1 },
+        { id: 'pdt', qty: 280 },
+        { id: 'beurre', qty: 15 },
+        { id: 'lait', qty: 50 }
+      ]
+    },
+    {
+      id: 's36',
+      name: 'Poulet basquaise express aux poivrons fondants & riz',
+      type: 'soir',
+      time: '20 min · casserole + poêle',
+      tags: ['Poulet', 'Mijoté', 'Sud-Ouest'],
+      steps: [
+        'Émince le poulet, l’oignon et le poivron en lamelles.',
+        'Fais dorer le poulet 5 min à feu vif, puis ajoute les oignons et les poivrons.',
+        'Verse les tomates concassées en boîte, assaisonne et laisse mijoter 10 min à feu doux avec couvercle.',
+        'Sers chaud avec une portion de riz blanc.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'poivron', qty: 0.8 },
+        { id: 'tomboite', qty: 0.5 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'riz', qty: 75 }
+      ]
+    },
+    {
+      id: 's37',
+      name: 'Tajine étudiant de poulet au citron, carottes & semoule fine',
+      type: 'soir',
+      time: '20 min · casserole',
+      tags: ['Semoule & Volaille', 'Saveurs du Maghreb', 'Épicé'],
+      steps: [
+        'Fais revenir les morceaux de poulet avec l’oignon et les épices curry 5 min dans la casserole.',
+        'Ajoute les carottes en rondelles, le demi-citron en quartiers et un verre d’eau, puis couvre 12 min à feu doux.',
+        'Hydrate la semoule avec l’eau bouillante salée, laisse gonfler 5 min et égrène.',
+        'Dresse la semoule dans une assiette creuse et nappe de la sauce tajine parfumée.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'semoule', qty: 85 },
+        { id: 'carotte', qty: 120 },
+        { id: 'citron', qty: 0.5 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'curry_poudre', qty: 4 }
+      ]
+    },
+    {
+      id: 's38',
+      name: 'Émincé de poulet au paprika doux, crème onctueuse & tagliatelles',
+      type: 'soir',
+      time: '15 min · casserole + poêle',
+      tags: ['Poulet & Pâtes', 'Crémeux', 'Réconfortant'],
+      steps: [
+        'Fais bouillir l’eau et cuis les pâtes al dente.',
+        'Fais dorer le poulet émincé et les champignons à la poêle 6 min avec une noisette de beurre.',
+        'Saupoudre généreusement de paprika doux puis verse la crème fraîche.',
+        'Laisse réduire 2 min à feu doux et mélange directement aux pâtes fumantes.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'pates', qty: 95 },
+        { id: 'creme', qty: 40 },
+        { id: 'paprika', qty: 5 },
+        { id: 'champignon', qty: 70 }
+      ]
+    },
+    {
+      id: 's39',
+      name: 'Semoule d’orient aux légumes d’hiver & pois chiches mijotés',
+      type: 'soir',
+      time: '15 min · casserole',
+      tags: ['100% Végétal', 'Semoule', 'Léger & Sain'],
+      steps: [
+        'Émince le poireau et la carotte en rondelles.',
+        'Fais revenir les légumes 3 min dans un filet d’huile, puis ajoute les pois chiches, le cube de bouillon et 200ml d’eau.',
+        'Laisse mijoter 10 min jusqu’à ce que les carottes soient tendres.',
+        'Prépare la semoule fine à l’eau bouillante et sers avec la cocotte de légumes parfumés.'
+      ],
+      ingredients: [
+        { id: 'semoule', qty: 90 },
+        { id: 'poireau', qty: 0.8 },
+        { id: 'carotte', qty: 120 },
+        { id: 'poischiches', qty: 0.5 },
+        { id: 'bouillon', qty: 1 }
+      ]
+    },
+    {
+      id: 's40',
+      name: 'Gratin de pommes de terre au saumon, crème & fromage fondu',
+      type: 'soir',
+      time: '20 min · poêle ou four',
+      tags: ['Plaisir', 'Gourmet', 'Montagnard marin'],
+      isPremium: true,
+      steps: [
+        'Coupe les pommes de terre en tranches très fines et précuis-les 8 min dans l’eau bouillante.',
+        'Dans un plat ou une poêle couverte, dispose les pommes de terre, le saumon coupé en dés et la crème assaisonnée.',
+        'Recouvre d’emmental râpé et fais gratiner 10 min à couvert ou sous le grill du four jusqu’à belle dorure.'
+      ],
+      ingredients: [
+        { id: 'saumon', qty: 100 },
+        { id: 'pdt', qty: 250 },
+        { id: 'creme', qty: 40 },
+        { id: 'fromage', qty: 25 }
+      ]
+    },
+    {
+      id: 's41',
+      name: 'Poulet sauté aux herbes de Provence & pommes de terre rissolées',
+      type: 'soir',
+      time: '18 min · poêle',
+      tags: ['Poulet', 'Croustillant', 'Classique'],
+      steps: [
+        'Coupe les pommes de terre en petits dés.',
+        'Fais rissoler les pommes de terre 12 min à la poêle avec du beurre et les herbes de Provence.',
+        'Ajoute l’escalope de poulet coupée en lanières et poursuis la cuisson 6 min jusqu’à ce que tout soit bien croustillant et doré.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 110 },
+        { id: 'pdt', qty: 260 },
+        { id: 'herbes_provence', qty: 4 },
+        { id: 'beurre', qty: 10 }
+      ]
+    },
+    {
+      id: 's42',
+      name: 'Risotto crémeux aux champignons de Paris & parmesan fondu',
+      type: 'soir',
+      time: '18 min · casserole',
+      tags: ['Saveurs d’Italie', 'Végétarien', 'Onctueux'],
+      steps: [
+        'Fais revenir les champignons émincés 3 min dans une noisette de beurre.',
+        'Ajoute le riz blanc et nappe avec les sucs de cuisson.',
+        'Verse le bouillon chaud louche par louche en remuant régulièrement pendant 15 min.',
+        'Hors du feu, incorpore le parmesan râpé et un peu de beurre pour lier le risotto.'
+      ],
+      ingredients: [
+        { id: 'riz', qty: 90 },
+        { id: 'champignon', qty: 120 },
+        { id: 'bouillon', qty: 1 },
+        { id: 'parmesan', qty: 25 },
+        { id: 'beurre', qty: 12 }
+      ]
+    },
+    {
+      id: 's43',
+      name: 'Saucisse de Toulouse dorée & semoule fondante au beurre',
+      type: 'soir',
+      time: '12 min · poêle',
+      tags: ['Semoule', 'Protéines', 'Rapide'],
+      steps: [
+        'Fais griller la saucisse à feu moyen dans la poêle pendant 10 min en la retournant souvent.',
+        'Prépare la semoule fine dans un bol avec de l’eau bouillante salée, couvre 5 min.',
+        'Incorpore le beurre dans la semoule chaude pour lui donner une texture veloutée.',
+        'Sers avec la saucisse croustillante, une pointe de moutarde et de la salade.'
+      ],
+      ingredients: [
+        { id: 'saucisse', qty: 1 },
+        { id: 'semoule', qty: 90 },
+        { id: 'beurre', qty: 15 },
+        { id: 'moutarde', qty: 10 },
+        { id: 'salade', qty: 0.25 }
+      ]
+    },
+    {
+      id: 's44',
+      name: 'Curry crémeux de lentilles corail au poulet doré & lait de coco',
+      type: 'soir',
+      time: '20 min · casserole',
+      tags: ['Poulet & Légumineuses', 'Protéines +++', 'Exotique'],
+      steps: [
+        'Fais dorer les dés de poulet 4 min dans la casserole avec le curry.',
+        'Ajoute les lentilles corail rincées, le lait de coco et un verre d’eau.',
+        'Laisse mijoter à feu doux 15 min en mélangeant régulièrement.',
+        'Sers chaud avec une portion de riz basmati.'
+      ],
+      ingredients: [
+        { id: 'poulet', qty: 100 },
+        { id: 'lentilles', qty: 70 },
+        { id: 'laitcoco', qty: 80 },
+        { id: 'curry_poudre', qty: 5 },
+        { id: 'riz', qty: 60 }
+      ]
+    },
+    {
+      id: 's45',
+      name: 'Shakshuka orientale épicée, œuf coulant & semoule fine',
+      type: 'soir',
+      time: '15 min · poêle',
+      tags: ['Semoule & Œufs', 'Végétarien', 'Piquant & Savoureux'],
+      steps: [
+        'Fais suer l’oignon et le poivron émincé dans la poêle 4 min.',
+        'Verse les tomates concassées, assaisonne de sel, poivre et épices, puis laisse mijoter 5 min.',
+        'Creuse deux puits dans la sauce, casse les 2 œufs, couvre et laisse cuire 4 min pour que le blanc fige et le jaune reste coulant.',
+        'Sers avec de la semoule fine hydratée pour saucer.'
+      ],
+      ingredients: [
+        { id: 'oeuf', qty: 2 },
+        { id: 'tomboite', qty: 0.8 },
+        { id: 'poivron', qty: 0.5 },
+        { id: 'semoule', qty: 70 },
+        { id: 'oignon', qty: 0.5 }
+      ]
+    },
+    {
+      id: 's46',
+      name: 'Pavé de saumon au curry doux, épinards fondants & riz basmati',
+      type: 'soir',
+      time: '15 min · poêle + casserole',
+      tags: ['Plaisir', 'Oméga-3', 'Équilibré'],
+      isPremium: true,
+      steps: [
+        'Cuis le riz blanc dans l’eau bouillante 10 min.',
+        'Dans la poêle, fais dorer le saumon 6 min avec un filet d’huile d’olive.',
+        'Ajoute les épinards surgelés, la crème et la pincée de curry doux, puis laisse réduire 3 min.',
+        'Dresse le pavé de saumon sur les épinards crémés et le riz blanc fumant.'
+      ],
+      ingredients: [
+        { id: 'saumon', qty: 125 },
+        { id: 'epinard', qty: 120 },
+        { id: 'creme', qty: 30 },
+        { id: 'riz', qty: 75 },
+        { id: 'curry_poudre', qty: 3 }
+      ]
+    },
+    {
+      id: 's47',
+      name: 'Poêlée de gnocchis au poulet doré, coulis de tomate & mozzarella',
+      type: 'soir',
+      time: '12 min · poêle',
+      tags: ['Poulet & Gnocchis', 'Fondant', 'Express'],
+      steps: [
+        'Fais dorer le poulet émincé et les gnocchis 6 min à la poêle dans une noisette de beurre.',
+        'Verse le coulis de tomate et assaisonne avec du sel et du poivre.',
+        'Dépose des morceaux de mozzarella sur le dessus, couvre la poêle 3 min jusqu’à ce que le fromage soit délicieusement fondu.'
+      ],
+      ingredients: [
+        { id: 'gnocchi', qty: 200 },
+        { id: 'poulet', qty: 90 },
+        { id: 'coulis', qty: 120 },
+        { id: 'mozzarella', qty: 0.5 }
       ]
     },
     {
