@@ -15,10 +15,10 @@ import { SettingsModal } from './components/SettingsModal';
 import { ShoppingList } from './components/ShoppingList';
 import { WeeklyPlanning } from './components/WeeklyPlanning';
 import { BASE_RECIPES } from './data/recipes';
-import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealHistoryEntry, MealType, Recipe, StudentProfile } from './types';
+import { DEFAULT_MEAL_SCHEDULE, DayMealPlan, MealHistoryEntry, MealSchedule, MealType, Recipe, StudentProfile } from './types';
 import { computeMonthlyBudgetStats, computeReceipt } from './utils/budget';
 import { calculateWeeklyNutrition, findRecipeById, getAllRecipes } from './utils/nutrition';
-import { generateEcoPlan, generateSmartAntiGaspiPlan, generateWeekPlan } from './utils/planner';
+import { generateEcoPlan, generateSmartAntiGaspiPlan, generateWeekPlan, getValidRecipes, pickSmartRecipe } from './utils/planner';
 import { getCurrentMonth } from './utils/seasons';
 import { isSupabaseConfigured, supabase } from './utils/supabaseClient';
 import {
@@ -49,7 +49,24 @@ function migrateSavedState(raw: any) {
     }));
   }
 
-  // 2. Sanitize customRecipes: ensure only midi and soir keys are retained
+  // 2. Sanitize profile & mealSchedule
+  let cleanProfile: StudentProfile | null = raw.profile || null;
+  if (cleanProfile) {
+    const rawSched = cleanProfile.mealSchedule || DEFAULT_MEAL_SCHEDULE;
+    const cleanSched: MealSchedule = {};
+    ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].forEach(day => {
+      cleanSched[day] = {
+        midi: rawSched[day]?.midi !== undefined ? Boolean(rawSched[day].midi) : true,
+        soir: rawSched[day]?.soir !== undefined ? Boolean(rawSched[day].soir) : true
+      };
+    });
+    cleanProfile = {
+      ...cleanProfile,
+      mealSchedule: cleanSched
+    };
+  }
+
+  // 3. Sanitize customRecipes: ensure only midi and soir keys are retained
   let cleanCustomRecipes: Record<MealType, Recipe[]> = {
     midi: [],
     soir: []
@@ -65,7 +82,7 @@ function migrateSavedState(raw: any) {
     }
   }
 
-  // 3. Sanitize completedMeals: remove any old '*-matin' keys
+  // 4. Sanitize completedMeals: remove any old '*-matin' keys
   const cleanCompleted: Record<string, boolean> = {};
   if (raw.completedMeals && typeof raw.completedMeals === 'object') {
     Object.entries(raw.completedMeals).forEach(([k, v]) => {
@@ -76,7 +93,7 @@ function migrateSavedState(raw: any) {
   }
 
   return {
-    profile: raw.profile || null,
+    profile: cleanProfile,
     weekPlan: cleanPlan,
     fridge: raw.fridge || {},
     completedMeals: cleanCompleted,
@@ -576,11 +593,31 @@ export default function App() {
 
     setProfile(updatedProfile);
 
-    // If disabling slot, remove recipe from weekPlan for that day and slot
+    const dayIdx = weekPlan.findIndex(d => d.day === dayName);
     if (!newVal) {
-      const dayIdx = weekPlan.findIndex(d => d.day === dayName);
+      // If disabling slot, remove recipe from weekPlan for that day and slot
       if (dayIdx !== -1) {
         handleSetMeal(dayIdx, type, null);
+      }
+    } else {
+      // If enabling slot and no recipe is currently set, automatically pick a smart recipe!
+      if (dayIdx !== -1 && !weekPlan[dayIdx]?.[type]) {
+        const pool = getValidRecipes(type, updatedProfile, customRecipes);
+        const used = new Set<string>();
+        weekPlan.forEach(d => {
+          if (d[type]) used.add(d[type]!);
+        });
+        const pick = pickSmartRecipe(pool, used, type, {
+          selectedMonth: selectedSeasonMonth,
+          history,
+          favoriteRecipeIds,
+          fridge,
+          tupperwareForLunch: type === 'midi',
+          customRecipes
+        });
+        if (pick) {
+          handleSetMeal(dayIdx, type, pick.id);
+        }
       }
     }
   };

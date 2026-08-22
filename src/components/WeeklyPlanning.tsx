@@ -94,23 +94,23 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
   plan.forEach((d, dIdx) => {
     (['midi', 'soir'] as MealType[]).forEach(type => {
       const isSlotActive = mealSchedule[d.day]?.[type] ?? true;
-      if (isSlotActive) {
-        plannedSlotsCount++;
-      }
-
       const rid = d[type];
-      if (!rid) return;
-      totalMealsCount++;
-      if (completedMeals[`${dIdx}-${type}`]) doneMealsCount++;
+      
+      // Count slot as planned if active and assigned a recipe
+      if (isSlotActive && rid) {
+        plannedSlotsCount++;
+        totalMealsCount++;
+        if (completedMeals[`${dIdx}-${type}`]) doneMealsCount++;
 
-      const recipe = findRecipeById(type, rid, customRecipes);
-      if (recipe) {
-        const match = recipe.time.match(/(\d+)\s*min/);
-        if (match) totalMinutes += parseInt(match[1], 10);
+        const recipe = findRecipeById(type, rid, customRecipes);
+        if (recipe) {
+          const match = recipe.time.match(/(\d+)\s*min/);
+          if (match) totalMinutes += parseInt(match[1], 10);
 
-        const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
-        if (seasonAnalysis.isAllInSeason) {
-          seasonalMealsCount++;
+          const seasonAnalysis = analyzeRecipeSeasonality(recipe, selectedSeasonMonth);
+          if (seasonAnalysis.isAllInSeason) {
+            seasonalMealsCount++;
+          }
         }
       }
     });
@@ -681,11 +681,16 @@ export const WeeklyPlanning: React.FC<WeeklyPlanningProps> = ({
                               </button>
                             )}
 
-                            {/* Delete */}
+                            {/* Delete / Remove meal */}
                             <button
-                              onClick={() => onSetMeal(dayIdx, type, null)}
+                              onClick={() => {
+                                onSetMeal(dayIdx, type, null);
+                                if (onToggleMealScheduleSlot) {
+                                  onToggleMealScheduleSlot(dayPlan.day, type);
+                                }
+                              }}
                               className="p-1.5 text-[#B84A39] hover:text-[#8C3426] hover:bg-[#FDF2F0] rounded-lg transition-colors cursor-pointer"
-                              title="Retirer ce repas"
+                              title="Retirer ce repas (désactiver le créneau)"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

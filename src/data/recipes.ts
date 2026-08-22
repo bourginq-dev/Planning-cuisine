@@ -729,6 +729,196 @@ export const BASE_RECIPES: Record<'midi' | 'soir', Recipe[]> = {
       ]
     },
     {
+      id: 'l39',
+      name: 'Salade niçoise étudiante au thon, œuf dur & haricots verts',
+      type: 'midi',
+      time: '10 min · casserole',
+      tags: ['Emportable / Tupperware', 'Riche en protéines', 'Frais'],
+      steps: [
+        'Fais cuire l’œuf 9 min dans l’eau bouillante pour obtenir un œuf dur.',
+        'Égoutte le thon et les haricots verts en boîte.',
+        'Dans un tupperware ou bol, dispose la salade verte, les dés de tomate, les haricots verts et le thon émietté.',
+        'Écale l’œuf, coupe-le en deux et assaisonne d’un filet d’huile ou vinaigrette.'
+      ],
+      ingredients: [
+        { id: 'thon', qty: 1 },
+        { id: 'oeuf', qty: 1 },
+        { id: 'haricots_verts', qty: 0.5 },
+        { id: 'tomate', qty: 1 },
+        { id: 'salade', qty: 0.3 }
+      ]
+    },
+    {
+      id: 'l40',
+      name: 'Quesadilla croustillante haricots rouges, maïs & cheddar fondant',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['100% Végétarien', 'Tex-Mex', 'Chaud & Fondant'],
+      steps: [
+        'Égoutte les haricots rouges et le maïs doux.',
+        'Dépose les tranches de cheddar, la sauce salsa, les haricots et le maïs sur une moitié du wrap.',
+        'Plie le wrap en deux et fais dorer à sec dans une poêle chaude 3 min par face jusqu’à ce que le cheddar fonde.'
+      ],
+      ingredients: [
+        { id: 'wrap', qty: 1 },
+        { id: 'haricots', qty: 0.4 },
+        { id: 'mais', qty: 0.3 },
+        { id: 'cheddar', qty: 2 },
+        { id: 'salsa', qty: 30 }
+      ]
+    },
+    {
+      id: 'l41',
+      name: 'Sandwich baguette poulet doré, moutarde douce & crudités croquantes',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Emportable', 'Protéiné', 'Express'],
+      steps: [
+        'Fais dorer l’escalope de poulet émincée 6 min à la poêle avec sel et poivre.',
+        'Ouvre le demi-morceau de baguette, tartine d’une fine couche de moutarde.',
+        'Garnis de rondelles de tomate fraîche, feuilles de salade et du poulet chaud ou tiède.'
+      ],
+      ingredients: [
+        { id: 'pain', qty: 0.5 },
+        { id: 'poulet', qty: 90 },
+        { id: 'tomate', qty: 0.5 },
+        { id: 'salade', qty: 0.25 },
+        { id: 'moutarde', qty: 10 }
+      ]
+    },
+    {
+      id: 'l42',
+      name: 'Salade tiède de pois chiches au curry, feta fondante & concombre',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Végétarien', 'Emportable / Tupperware', 'Plein d’énergie'],
+      steps: [
+        'Fais revenir les pois chiches égouttés à la poêle 4 min avec la poudre de curry et un filet d’huile.',
+        'Coupe le concombre et la tomate en petits dés.',
+        'Émiette la feta.',
+        'Mélange le tout dans une boîte ou une assiette avec un trait de vinaigrette.'
+      ],
+      ingredients: [
+        { id: 'poischiches', qty: 0.8 },
+        { id: 'feta', qty: 50 },
+        { id: 'concombre', qty: 0.5 },
+        { id: 'tomate', qty: 0.5 },
+        { id: 'curry_poudre', qty: 3 }
+      ]
+    },
+    {
+      id: 'l43',
+      name: 'Panini chaud poulet doré, pesto alla Genovese & mozzarella coulante',
+      type: 'midi',
+      time: '8 min · poêle',
+      tags: ['Saveurs d’Italie', 'Chaud & Gourmand', 'Rapide'],
+      steps: [
+        'Fais dorer le poulet émincé 5 min à la poêle.',
+        'Ouvre la baguette en deux, nappe de pesto vert et dépose les morceaux de mozzarella.',
+        'Ajoute le poulet et presse le sandwich dans une poêle chaude 3 min de chaque côté avec un couvercle lourd pour toaster.'
+      ],
+      ingredients: [
+        { id: 'pain', qty: 0.5 },
+        { id: 'poulet', qty: 80 },
+        { id: 'pesto', qty: 25 },
+        { id: 'mozzarella', qty: 0.5 }
+      ]
+    },
+    {
+      id: 'l44',
+      name: 'Salade de riz façon cantine revisitée (thon, maïs doux, emmental & tomate)',
+      type: 'midi',
+      time: '12 min · casserole',
+      tags: ['Emportable / Tupperware', 'Grand classique', 'Anti-coup de pompe'],
+      steps: [
+        'Fais cuire le riz blanc 10 min dans l’eau bouillante salée, puis rince-le à l’eau froide.',
+        'Coupe l’emmental et la tomate en petits cubes.',
+        'Mélange le riz froid avec le thon émietté, le maïs égoutté et les cubes de fromage.',
+        'Assaisonne d’un filet d’huile d’olive ou mayonnaise.'
+      ],
+      ingredients: [
+        { id: 'riz', qty: 80 },
+        { id: 'thon', qty: 1 },
+        { id: 'mais', qty: 0.4 },
+        { id: 'fromage', qty: 30 },
+        { id: 'tomate', qty: 1 }
+      ]
+    },
+    {
+      id: 'l45',
+      name: 'Wrap avocat mûr, œuf dur écrasé & batavia fraîche',
+      type: 'midi',
+      time: '10 min · casserole',
+      tags: ['Végétarien', 'Bonnes graisses', 'Frais & Onctueux'],
+      steps: [
+        'Cuis l’œuf 9 min dans l’eau bouillante, écale-le et écrase-le à la fourchette avec un trait de citron et sel.',
+        'Écrase la moitié d’avocat sur le wrap.',
+        'Ajoute l’œuf écrasé et les feuilles de salade lavées, puis roule serré.'
+      ],
+      ingredients: [
+        { id: 'wrap', qty: 1 },
+        { id: 'avocat', qty: 0.5 },
+        { id: 'oeuf', qty: 1 },
+        { id: 'salade', qty: 0.3 },
+        { id: 'citron', qty: 0.3 }
+      ]
+    },
+    {
+      id: 'l46',
+      name: 'Tartines campagnardes chèvre chaud doré, miel & salade verte',
+      type: 'midi',
+      time: '7 min · poêle ou four',
+      tags: ['Végétarien', 'Plaisir sucré-salé', 'Super rapide'],
+      steps: [
+        'Tranche la baguette en tartines et dépose les rondelles de bûche de chèvre.',
+        'Arrose d’un filet de miel.',
+        'Fais toaster à la poêle couverte à feu doux 5 min ou sous le gril jusqu’à ce que le chèvre dore.',
+        'Déguste avec la salade verte assaisonnée.'
+      ],
+      ingredients: [
+        { id: 'pain', qty: 0.5 },
+        { id: 'chevre', qty: 60 },
+        { id: 'miel', qty: 15 },
+        { id: 'salade', qty: 0.35 }
+      ]
+    },
+    {
+      id: 'l47',
+      name: 'Salade fraîche de tortellinis au jambon, tomates & emmental',
+      type: 'midi',
+      time: '6 min · casserole',
+      tags: ['Emportable / Tupperware', 'Plaisir express', 'Pâtes fraîches'],
+      steps: [
+        'Plonge les tortellinis 3 min dans l’eau frémissante salée, puis égoutte et rince à l’eau fraîche.',
+        'Découpe le jambon en lamelles et la tomate en dés.',
+        'Mélange les pâtes froides, le jambon, la tomate et l’emmental avec un trait de vinaigrette.'
+      ],
+      ingredients: [
+        { id: 'tortellini', qty: 180 },
+        { id: 'jambon', qty: 1 },
+        { id: 'tomate', qty: 1 },
+        { id: 'fromage', qty: 25 }
+      ]
+    },
+    {
+      id: 'l48',
+      name: 'Croque-monsieur rustique chèvre fondant & jambon',
+      type: 'midi',
+      time: '7 min · poêle',
+      tags: ['Croc gourmand', 'Chaud & Croustillant', 'Budget malin'],
+      steps: [
+        'Garnis les tranches de pain de mie avec la tranche de jambon et des rondelles de chèvre.',
+        'Beurre légèrement les faces extérieures.',
+        'Fais dorer à feu moyen 3 à 4 min par face à la poêle avec un couvercle pour fondre le fromage.'
+      ],
+      ingredients: [
+        { id: 'painmie', qty: 2 },
+        { id: 'jambon', qty: 1 },
+        { id: 'chevre', qty: 45 },
+        { id: 'beurre', qty: 10 }
+      ]
+    },
+    {
       id: 'l99',
       name: 'Sandwich jambon-beurre baguette',
       type: 'midi',
@@ -1660,6 +1850,198 @@ export const BASE_RECIPES: Record<'midi' | 'soir', Recipe[]> = {
         { id: 'poulet', qty: 90 },
         { id: 'coulis', qty: 120 },
         { id: 'mozzarella', qty: 0.5 }
+      ]
+    },
+    {
+      id: 's48',
+      name: 'Nouilles sautées aux légumes croquants, œuf au plat & sauce soja',
+      type: 'soir',
+      time: '10 min · poêle + casserole',
+      tags: ['Asiatique', 'Végétarien', 'Express'],
+      steps: [
+        'Cuis les nouilles instantanées 3 min dans l’eau bouillante sans le sachet d’arômes chimique.',
+        'Dans une poêle avec un filet d’huile, saisis les légumes surgelés 5 min.',
+        'Ajoute les nouilles égouttées et la sauce soja, mélange 1 min.',
+        'Cuis un œuf au plat dans la poêle et dépose-le coulant sur le dessus.'
+      ],
+      ingredients: [
+        { id: 'nouilles', qty: 1 },
+        { id: 'legsurg', qty: 160 },
+        { id: 'oeuf', qty: 1 },
+        { id: 'sauce_soja', qty: 15 }
+      ]
+    },
+    {
+      id: 's49',
+      name: 'Gratin express de gnocchis au thon, coulis & mozzarella',
+      type: 'soir',
+      time: '15 min · four ou poêle',
+      tags: ['Gourmand', 'Poisson & Pâtes', 'Confort Food'],
+      steps: [
+        'Fais dorer les gnocchis 4 min dans la poêle avec une noisette de beurre.',
+        'Ajoute le thon émietté et le coulis de tomate assaisonné.',
+        'Recouvre de tranches de mozzarella et laisse gratiner au four à 200°C 8 min (ou couvre la poêle 5 min à feu doux).'
+      ],
+      ingredients: [
+        { id: 'gnocchi', qty: 200 },
+        { id: 'thon', qty: 1 },
+        { id: 'coulis', qty: 120 },
+        { id: 'mozzarella', qty: 0.5 }
+      ]
+    },
+    {
+      id: 's50',
+      name: 'Risotto minute aux lardons fumés, petits pois & parmesan',
+      type: 'soir',
+      time: '18 min · casserole',
+      tags: ['Saveurs d’Italie', 'Onctueux', 'Généreux'],
+      steps: [
+        'Fais dorer les lardons 3 min dans la casserole, puis ajoute le riz blanc.',
+        'Verse le bouillon chaud louche par louche pendant 15 min en remuant.',
+        'Ajoute les petits pois 3 min avant la fin.',
+        'Incorpore le parmesan hors du feu pour obtenir une texture ultra-crémeuse.'
+      ],
+      ingredients: [
+        { id: 'riz', qty: 90 },
+        { id: 'lardons', qty: 60 },
+        { id: 'petits_pois', qty: 0.4 },
+        { id: 'parmesan', qty: 20 },
+        { id: 'bouillon', qty: 1 }
+      ]
+    },
+    {
+      id: 's51',
+      name: 'Curry doux de lentilles corail aux carottes & lait de coco',
+      type: 'soir',
+      time: '20 min · casserole',
+      tags: ['100% Végétal', 'Riche en fibres', 'Super sain'],
+      steps: [
+        'Émince la carotte en fines rondelles et fais-la suer 3 min dans la casserole avec le curry.',
+        'Ajoute les lentilles corail rincées, le lait de coco et un verre d’eau.',
+        'Laisse mijoter à feu doux 15 min en remuant.',
+        'Déguste avec une portion de riz blanc chaud.'
+      ],
+      ingredients: [
+        { id: 'lentilles', qty: 80 },
+        { id: 'carotte', qty: 120 },
+        { id: 'laitcoco', qty: 90 },
+        { id: 'curry_poudre', qty: 5 },
+        { id: 'riz', qty: 60 }
+      ]
+    },
+    {
+      id: 's52',
+      name: 'Poêlée paysanne pommes de terre rissolées, oignons & saucisse',
+      type: 'soir',
+      time: '15 min · poêle',
+      tags: ['Terroir', 'Rassasiant', 'Simple & Bon'],
+      steps: [
+        'Coupe les pommes de terre en petits cubes.',
+        'Fais-les rissoler dans la poêle avec l’oignon émincé et la saucisse tranchée en rondelles pendant 12 à 14 min jusqu’à ce qu’elles soient fondantes et bien dorées.',
+        'Sers chaud avec une poignée de salade verte.'
+      ],
+      ingredients: [
+        { id: 'pdt', qty: 250 },
+        { id: 'saucisse', qty: 1 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'salade', qty: 0.25 }
+      ]
+    },
+    {
+      id: 's53',
+      name: 'Chili sin carne végétarien aux haricots rouges, maïs & coulis',
+      type: 'soir',
+      time: '15 min · casserole',
+      tags: ['100% Végétarien', 'Riche en protéines végétales', 'Épicé'],
+      steps: [
+        'Fais revenir l’oignon dans un filet d’huile d’olive.',
+        'Ajoute les haricots rouges rincés, le maïs doux et le coulis de tomate.',
+        'Assaisonne d’herbes et d’épices, laisse mijoter 10 min.',
+        'Sers chaud accompagné de riz blanc.'
+      ],
+      ingredients: [
+        { id: 'haricots', qty: 0.8 },
+        { id: 'mais', qty: 0.4 },
+        { id: 'tomboite', qty: 0.5 },
+        { id: 'oignon', qty: 0.5 },
+        { id: 'riz', qty: 60 }
+      ]
+    },
+    {
+      id: 's54',
+      name: 'Omelette roulée aux champignons persillés & emmental',
+      type: 'soir',
+      time: '10 min · poêle',
+      tags: ['Végétarien', 'Express', 'Moelleux'],
+      steps: [
+        'Fais suer les champignons émincés 4 min dans la poêle avec une noisette de beurre.',
+        'Bats les 2 œufs en omelette avec sel et poivre, verse sur les champignons chauds.',
+        'Parsème d’emmental râpé, laisse prendre à feu moyen et replie l’omelette sur elle-même.',
+        'Sers immédiatement avec la salade verte.'
+      ],
+      ingredients: [
+        { id: 'oeuf', qty: 2 },
+        { id: 'champignon', qty: 100 },
+        { id: 'fromage', qty: 25 },
+        { id: 'beurre', qty: 10 },
+        { id: 'salade', qty: 0.25 }
+      ]
+    },
+    {
+      id: 's55',
+      name: 'Pâtes au thon crémeux, coulis de tomate & zeste de citron',
+      type: 'soir',
+      time: '12 min · casserole',
+      tags: ['Grand classique', 'Facile', 'Généreux'],
+      steps: [
+        'Fais cuire les pâtes dans l’eau bouillante salée 9 min.',
+        'Dans une petite casserole ou poêle, chauffe le coulis de tomate, la crème fraîche et le thon égoutté.',
+        'Ajoute un filet de citron et mélange la sauce onctueuse aux pâtes égouttées.'
+      ],
+      ingredients: [
+        { id: 'pates', qty: 100 },
+        { id: 'thon', qty: 1 },
+        { id: 'coulis', qty: 100 },
+        { id: 'creme', qty: 30 },
+        { id: 'citron', qty: 0.3 }
+      ]
+    },
+    {
+      id: 's56',
+      name: 'Tortellinis fondants au pesto rosso & copeaux de parmesan',
+      type: 'soir',
+      time: '6 min · casserole',
+      tags: ['Express 5 min', 'Saveurs d’Italie', 'Pâtes fraîches'],
+      steps: [
+        'Cuis les tortellinis 3 min dans l’eau bouillante salée.',
+        'Égoutte en gardant 2 cuillères à soupe d’eau de cuisson.',
+        'Mélange avec le pesto rosso et le parmesan râpé jusqu’à enrobage parfait.'
+      ],
+      ingredients: [
+        { id: 'tortellini', qty: 200 },
+        { id: 'pesto_rosso', qty: 40 },
+        { id: 'parmesan', qty: 20 },
+        { id: 'salade', qty: 0.25 }
+      ]
+    },
+    {
+      id: 's57',
+      name: 'Poêlée de patates douces rôties, pois chiches & crème curry',
+      type: 'soir',
+      time: '18 min · poêle',
+      tags: ['Végétarien', 'Riche en vitamines', 'Doux & Épicé'],
+      steps: [
+        'Épluche et coupe la patate douce en petits dés de 1 cm.',
+        'Fais-les rôtir à la poêle 10 min avec un filet d’huile à feu moyen-vif.',
+        'Ajoute les pois chiches, la crème et la poudre de curry, laisse mijoter 5 min.',
+        'Sers chaud avec une portion de riz blanc.'
+      ],
+      ingredients: [
+        { id: 'patate_douce', qty: 200 },
+        { id: 'poischiches', qty: 0.6 },
+        { id: 'creme', qty: 40 },
+        { id: 'curry_poudre', qty: 5 },
+        { id: 'riz', qty: 50 }
       ]
     },
     {
